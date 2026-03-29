@@ -1,0 +1,17 @@
+{
+    "name": "leoknudsen/wp-unioo-sync",
+    "description": "WordPress Sync tool for Unioo",
+    "autoload": {
+        "psr-4": {
+            "LeoKnudsen\\WpUniooSync\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "lk22",
+            "email": "nightskater-220@hotmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {}
+}
