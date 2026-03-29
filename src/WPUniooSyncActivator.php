@@ -1,6 +1,8 @@
 <?php
 namespace LeoKnudsen\WpUniooSync;
 
+require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+
 if( ! defined('ABSPATH') ) {
   exit();
 }
@@ -20,7 +22,6 @@ if (!class_exists('WPUniooSyncActivator')) {
         PRIMARY KEY  (id)
       ) $charset_collate;";
 
-      require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
       dbDelta($sql);
     }
   }
