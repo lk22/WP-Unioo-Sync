@@ -25,6 +25,16 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
 
       register_setting(
         'wp_unioo_sync_settings_group',
+        'wp_unioo_sync_graphql_url',
+        [
+          'type' => 'string',
+          'sanitize_callback' => 'esc_url_raw',
+          'default' => ''
+        ]
+      );
+
+      register_setting(
+        'wp_unioo_sync_settings_group',
         'wp_unioo_sync_auto_generate_token_on_unauthorization',
         [
           'type'              => 'boolean',
@@ -45,6 +55,14 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
       );
 
       add_settings_field(
+        'wp_unioo_sync_graphql_url',
+        __('GraphQL Endpoint URL', WP_UNIOO_SYNC_TEXTDOMAIN),
+        [$this, 'render_api_url'],
+        'wp-unioo-sync-settings',
+        'wp_unioo_sync_api_section'
+      );
+
+      add_settings_field(
         'wp_unioo_sync_bearer_token',
         __('API Key', WP_UNIOO_SYNC_TEXTDOMAIN),
         [$this, 'render_api_key_field'],
@@ -59,6 +77,20 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         'wp-unioo-sync-settings',
         'wp_unioo_sync_api_section'
       );
+    }
+
+    public function render_api_url() {
+      $url = get_option('wp_unioo_sync_graphql_url', '');
+      ?>
+      <input
+        type="text"
+        id="wp_unioo_sync_graphql_url"
+        name="wp_unioo_sync_graphql_url"
+        value="<?php echo esc_attr($url); ?>"
+        class="regular-text"
+      />
+      <p class="description"><?php esc_html_e('The GraphQL endpoint URL for Unioo API.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+      <?php
     }
 
     public function render_api_key_field() {
@@ -128,8 +160,9 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
       global $wpdb;
 
       $sync_logs = $wpdb->get_results(
-        "SELECT * FROM " . WP_UNIOO_SYNC_TABLE_NAME .
-        " ORDER BY sync_time DESC"
+        "SELECT * FROM " . "wp_unioo_sync" .
+        " ORDER BY sync_time DESC",
+        OBJECT
       );
 
       require_once WP_UNIOO_SYNC_PLUGIN_DIR . 'src/Admin/views/view.sync-logs.php';

@@ -32,8 +32,8 @@ if ( ! class_exists('UniooClient') ) {
     }
 
     public function refresh_api_token(): void {
-      $url = $this->api_url . '/api/refresh-token';
-      $response = wp_remote_post($url, [
+      $endpoint = "https://https://api.unioo.io/api/refresh-token";
+      $response = wp_remote_post($endpoint, [
         'headers' => [
           'Authorization' => 'Bearer ' . $this->bearer_token,
           'Content-Type' => 'application/json',
@@ -103,8 +103,14 @@ if ( ! class_exists('UniooClient') ) {
                   invitationDate
                 }
               }
-            }
+            },
           ',
+          'variables' => [
+            'first' => 11,
+            'after' => null,
+            'where' => null,
+            'subscriptionId' => null,
+          ],
         ]),
       ]);
 
@@ -119,14 +125,15 @@ if ( ! class_exists('UniooClient') ) {
       $data = json_decode($body, true);
 
       if (isset($data['errors'])) {
-        return [
-          'success' => false,
-          'message' => $data['errors'][0]['message'] ?? __('An error occurred while syncing members.', WP_UNIOO_SYNC_TEXTDOMAIN),
-        ];
+          return [
+            'success' => false,
+            'message' => __('Unauthorized access. Please check your API token.', WP_UNIOO_SYNC_TEXTDOMAIN),
+          ];
       }
 
       return [
         'success' => true,
+        'message' => __('Members list synced successfully.', WP_UNIOO_SYNC_TEXTDOMAIN),
         'data' => $data['data']['listOverviewMembers'] ?? [],
       ];
     }

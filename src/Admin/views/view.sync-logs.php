@@ -1,3 +1,5 @@
+<?php
+?>
 <div class="wrap">
   <h1><?php echo __('WP Unioo Sync', WP_UNIOO_SYNC_TEXTDOMAIN); ?></h1>
   <p><?php echo __('Welcome_to the WP Unioo Sync plugin, use this page to manage your sync settings and view sync logs', WP_UNIOO_SYNC_TEXTDOMAIN)?></p>
@@ -16,9 +18,9 @@
         <?php foreach ( $sync_logs as $log ) : ?>
           <tr>
             <td><?php echo esc_html( $log->id ); ?></td>
-            <td><?php echo esc_html( $log->status ); ?></td>
-            <td><?php echo esc_html( $log->sync_time ); ?></td>
-            <td><?php echo esc_html( $log->message ); ?></td>
+            <td><?php echo esc_html( $log->sync_status ); ?></td>
+            <td><?php echo esc_html( date('Y-m-d H:i:s', strtotime($log->sync_time) + 2 * 3600) ); ?></td>
+            <td><?php echo esc_html( $log->sync_message ); ?></td>
           </tr>
         <?php endforeach; ?>
       <?php endif; ?>

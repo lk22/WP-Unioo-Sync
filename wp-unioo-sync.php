@@ -29,6 +29,9 @@ use LeoKnudsen\WpUniooSync\WPUniooSyncActivator;
 use LeoKnudsen\WpUniooSync\WPUniooSyncDeactivator;
 use LeoKnudsen\WpUniooSync\WPUniooSyncAdminMenu;
 
+use LeoKnudsen\WpUniooSync\Admin\Unioo\UniooClient;
+use LeoKnudsen\WpUniooSync\Admin\Unioo\Sync\SyncMembersList;
+
 // register activation hook
 register_activation_hook(__FILE__, [new WPUniooSyncActivator(), 'activate']);
 // register deactivation hook
@@ -37,3 +40,11 @@ register_deactivation_hook(__FILE__, [new WPUniooSyncDeactivator(), 'deactivate'
 add_action('plugins_loaded', function() {
   new WPUniooSyncAdminMenu();
 });
+
+if (isset($_REQUEST['sync_action']) && $_REQUEST['sync_action'] === 'sync_members_list') {
+  // Handle the AJAX request to sync members list
+  $client = new UniooClient(get_option('wp_unioo_sync_graphql_url'), get_option('wp_unioo_sync_bearer_token'));
+  $sync = new SyncMembersList($client);
+  $response = $sync->execute();
+  wp_send_json_success(['message' => 'Unioo sync completed', 'response' => $response]);
+}
