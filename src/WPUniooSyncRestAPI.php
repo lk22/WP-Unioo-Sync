@@ -6,6 +6,7 @@ use WP_REST_Server;
 use WP_User;
 
 use LeoKnudsen\WpUniooSync\Exceptions\UniooSyncUserNotCreatedException;
+use LeoKnudsen\WpUniooSync\Exceptions\UniooSyncLogNotCreatedException;
 
 if ( ! defined('ABSPATH') ) {
   exit();
@@ -30,67 +31,131 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
 
       $members = $request->get_params(); // Ensure file parameters are available in the request
 
-      // loop through the members and process the JSON data as needed, for example:
-      foreach ($members as $member) {
-        // make sure if there is a user in the system with the same email as the member, if not create a new user and assign a role, for example: subscriber
-
+      // loop through the members and process the JSON data as needed
+      foreach ($members["members"] as $member) {
         // if there is a custom table for storing the members, we can check if the table exists and if not create it, and then insert the member data into the table
         // otherwise save the member data in the default WordPress user meta or a custom post type, depending on the use case
         if ( get_option('wp_unioo_sync_members_table', false) ) {
           $table_name = get_option('wp_unioo_sync_members_table');
-        } else {
-          if ( $this->createSyncedUser($member) ) {
+          } else {
+          // make sure if there is a user in the system with the same email as the member, if not create a new user and assign a role, for example: subscriber
+          // then save the member data in the user meta, for example: email, gamertag, and other relevant information from the data
+
+          if ( $user = $this->createSynceUnioodUser($member) ) {
             $memberData = [
-              'name' => $member['name'],
-              'email' => $member['email'],
-              'telefon' => $member['telefon'] ?? '',
-              'member_id' => $member['member_id'] ?? '',
+              'Navn' => $member['Navn'],
+              'email' => $member['Email'],
+              'Telefon' => $member['Telefon'],
+              'Fødselsdato' => $member['Fødselsdato'],
+              'Adresse' => $member['Adresse'],
+              'By' => $member['By'],
+              'Postnummer' => $member['Postnummer'],
+              'Identifikation' => $member['Identifikation'],
+              'Kontingent' => $member['Kontingenter (Navne)'],
+              'Ikke betalt kontingent' => $member['Ubetalte regninger'],
+              'Indmeldelsesdato' => $member['Indmeldelsesdato'],
+              'Udmeldelsesdato' => $member['Udmeldelsesdato'],
+              'Aktiv betalingsmetode' => $member['Aktiv betalingsmetode'],
+              'Nyeste note' => $member['Nyeste note'],
             ];
+
+            $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
+
+            if ( is_array(json_encode($custom_fields)) && count($custom_fields) > 0 ) {
+              $custom_fields = get_option('wp_unioo_sync_custom_fields');
+              foreach ( $custom_fields as $field ) {
+                if ( isset($member[$field]) ) {
+                  $memberData[$field] = $member[$field];
+                }
+              }
+            }
+
+            foreach ( $memberData as $key => $value ) {
+              update_user_meta($user->ID, $key, $value);
+            }
+          } else {
+            $this->logSyncStatus(
+              'failure',
+              'Failed to create user for member: ' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided') . ' - ' . ($user['message'] ?? 'No error message provided')
+             );
+            continue; // Skip to the next member if user creation failed
           }
         }
       }
+
       // Process the CSV file and sync members with Unioo
       // This is a placeholder for your actual sync logic
       $sync_result = [
         'success' => true,
-        'message' => __('Members synced successfully.', WP_UNIOO_SYNC_TEXTDOMAIN),
+        'message' => __('CSV import completed successfully.', WP_UNIOO_SYNC_TEXTDOMAIN),
       ];
 
       // Log the sync status in the database
-      $wpdb->insert(
-        "wp_unioo_sync",
-        [
-          'sync_status' => $sync_result['success'] ? 'success' : 'failure',
-          'sync_time' => current_time('mysql'),
-          'sync_message' => $sync_result['message'],
-        ],
-        [
-          '%s',
-          '%s',
-          '%s',
-        ]
+      $this->logSyncStatus(
+        $sync_result['success'] ? 'success' : 'failure',
+        $sync_result['message']
       );
 
       return rest_ensure_response($sync_result);
     }
 
-    private function createSyncedUser($member): ?WP_User {
+    /**
+     *
+     * Create user for synced unioo member
+     * @param mixed $member
+     * @throws UniooSyncUserNotCreatedException
+     * @return bool|WP_User|null
+     */
+    private function createSynceUnioodUser($member): array|WP_User|null {
       $user = get_user_by('email', $member['email']);
+
       if ( ! $user ) {
-        try {
-          $user_id = wp_create_user($member['email'], wp_generate_password(), $member['email']);
-          if (is_wp_error($user_id)) {
-            throw new UniooSyncUserNotCreatedException('Failed to create user: ' . $user_id->get_error_message());
-          }
-          $user = get_user_by('id', $user_id);
-          $user->set_role('subscriber');
-          return $user;
-        } catch (UniooSyncUserNotCreatedException $e) {
-          error_log('Failed to create user from Unioo sync API: ' . $e->getMessage());
-          return null;
+        if ( get_option('wp_unioo_sync_required_membership', false) && $member['Ubetalte regninger'] === "Ja" ) {
+          return ["success" => false, "message" => 'Member has unpaid bills, skipping user creation.'];
         }
+
+        $user_id = wp_create_user($member['Email'], wp_generate_password(), $member['Email']);
+        if (is_wp_error($user_id)) {
+          return ["success" => false, "message" => 'Failed to create user: ' . $user_id->get_error_message()];
+        }
+
+        $user = get_user_by('id', $user_id);
+        $user->set_role('subscriber');
       }
+
       return $user;
+    }
+
+    /**
+     * Create new log for sync status
+     *
+     * @param mixed $status
+     * @param mixed $message
+     * @throws UniooSyncLogNotCreatedException
+     * @return void
+     */
+    private function logSyncStatus($status, $message) {
+      global $wpdb;
+      try {
+        $sync_log_creatd = $wpdb->insert(
+          "wp_unioo_sync",
+          [
+            'sync_status' => $status,
+            'sync_time' => current_time('mysql'),
+            'sync_message' => $message,
+          ],
+          [
+            '%s',
+            '%s',
+            '%s',
+           ]
+         );
+          if ( $sync_log_creatd === false ) {
+            throw new UniooSyncLogNotCreatedException('Failed to log sync status in the database.');
+          }
+      } catch (UniooSyncLogNotCreatedException $e) {
+        error_log('Failed to log sync status: ' . $e->getMessage());
+      }
     }
   }
 }
