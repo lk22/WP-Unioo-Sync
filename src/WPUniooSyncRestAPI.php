@@ -41,7 +41,7 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
         // otherwise save the member data in the default WordPress user meta or a custom post type, depending on the use case
         if ( get_option('wp_unioo_sync_members_table', false) ) {
           $table_name = get_option('wp_unioo_sync_members_table');
-          } else {
+        } else {
           // make sure if there is a user in the system with the same email as the member, if not create a new user and assign a role, for example: subscriber
           // then save the member data in the user meta, for example: email, gamertag, and other relevant information from the data
 
@@ -80,10 +80,6 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
             $createdUsers++;
 
           } else {
-            $this->logSyncStatus(
-              'failure',
-              'Failed to create user for member: ' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided') . ' - ' . ($user['message'] ?? 'No error message provided')
-             );
             continue; // Skip to the next member if user creation failed
           }
         }
@@ -116,13 +112,24 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
       $user = get_user_by('email', $member['email']);
 
       if ( ! $user ) {
+        // if the option to require membership is enabled and the member has unpaid bills, skip creating the user and log the action
         if ( get_option('wp_unioo_sync_required_membership', false) && $member['Ubetalte regninger'] === "Ja" ) {
           $log_message = 'Member has unpaid bills, skipping user creation' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided');
           $this->logSyncStatus('success', $log_message);
           return ["success" => false, "message" => 'Member has unpaid bills, skipping user creation.'];
         }
 
-        $user_id = wp_create_user($member['Email'], wp_generate_password(), $member['Email']);
+        // Create a new user with the member's email and a generated password
+        $password = get_option('wp_unioo_sync_default_password', wp_generate_password());
+
+        // make sure to sanitize the password field if it is set in the options, otherwise generate a random password
+        if ( empty($password) ) {
+          $password = wp_generate_password();
+        } else {
+          $password = sanitize_text_field($password);
+        }
+
+        $user_id = wp_create_user($member['Email'], $password, $member['Email']);
         if (is_wp_error($user_id)) {
           $log_message = 'Failed to create user: ' . $user_id->get_error_message() . ' for member: ' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided');
           $this->logSyncStatus('failure', $log_message);
@@ -132,6 +139,14 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
         $user = get_user_by('id', $user_id);
         $user->set_role('subscriber');
         $this->logSyncStatus('success', 'User created successfully for member: ' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided'));
+      }
+
+      // if current user has unpaid bills and the option to require membership is enabled, delete the user and log the action
+      if ( $user && get_option('wp_unioo_sync_required_membership', false) && $member['Ubetalte regninger'] === "Ja" ) {
+        wp_delete_user($user->ID);
+        $log_message = 'Existing user member with unpaid bills, user deleted: ' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided');
+        $this->logSyncStatus('success', $log_message);
+        return ["success" => false, "message" => 'Existing member with existing user, has unpaid bills, user deleted.'];
       }
 
       return $user;
