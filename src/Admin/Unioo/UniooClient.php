@@ -127,7 +127,7 @@ if ( ! class_exists('UniooClient') ) {
       if (isset($data['errors'])) {
           return [
             'success' => false,
-            'message' => __('Unauthorized access. Please check your API token.', WP_UNIOO_SYNC_TEXTDOMAIN),
+            'message' => __('Unauthorized access. Please check your Unioo API token.', WP_UNIOO_SYNC_TEXTDOMAIN),
           ];
       }
 

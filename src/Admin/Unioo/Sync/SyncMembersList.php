@@ -32,8 +32,7 @@ if ( ! class_exists('SyncMembersList') ) {
           '%s',
         ]
       );
-
-        return $response;
+      return $response;
     }
   }
 }
