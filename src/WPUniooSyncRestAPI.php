@@ -77,8 +77,8 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
             foreach ( $memberData as $key => $value ) {
               update_user_meta($user->ID, $key, $value);
             }
-            $createdUsers++;
 
+            $createdUsers++;
           } else {
             continue; // Skip to the next member if user creation failed
           }
@@ -109,7 +109,7 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
      * @return bool|WP_User|null
      */
     private function createSynceUnioodUser($member): array|WP_User|null {
-      $user = get_user_by('email', $member['email']);
+      $user = get_user_by('email', $member['Email']);
 
       if ( ! $user ) {
         // if the option to require membership is enabled and the member has unpaid bills, skip creating the user and log the action
@@ -120,18 +120,25 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
         }
 
         // Create a new user with the member's email and a generated password
-        $password = get_option('wp_unioo_sync_default_password', wp_generate_password());
+        if ( get_option('wp_unioo_sync_user_default_username_field', false) ) {
+          $username = $member[str_replace(['{{', '}}'], '', get_option('wp_unioo_sync_user_default_username_field', false))] ?? $member['Email'];
+        } else {
+          $username = $member['Email'];
+        }
 
+        $username = sanitize_user($username);
+
+        $password = get_option('wp_unioo_sync_user_default_password_field', false);
         // make sure to sanitize the password field if it is set in the options, otherwise generate a random password
-        if ( empty($password) ) {
+        if ( $password === 'generate_random' ) {
           $password = wp_generate_password();
         } else {
           $password = sanitize_text_field(
-            $member[str_replace(['{{', '}}'], '', get_option('wp_unioo_sync_default_password_field', 'password'))]
+            $member[str_replace(['{{', '}}'], '', get_option('wp_unioo_sync_user_default_password_field', false))]
           );
         }
 
-        $user_id = wp_create_user($member['Email'], $password, $member['Email']);
+        $user_id = wp_create_user($username, $password, $member['Email']);
         if (is_wp_error($user_id)) {
           $log_message = 'Failed to create user: ' . $user_id->get_error_message() . ' for member: ' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided');
           $this->logSyncStatus('failure', $log_message);

@@ -60,6 +60,9 @@ $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
 </dialog>
 
 <style>
+  table {
+    margin-top: 20px !important;
+  }
   dialog {
     border: none;
     padding: 20px;

@@ -136,6 +136,132 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         ]
       );
 
+      register_setting(
+        'wp_unioo_sync_settings_group',
+        'wp_unioo_sync_database_table_fields',
+        [
+          'type' => 'array',
+          'sanitize_callback' => function($value) {
+            global $wpdb;
+
+            $option_table = sanitize_key(get_option('wp_unioo_sync_defaul_database_table', ''));
+
+            if (empty($option_table) || ! is_array($value)) {
+              return [];
+            }
+
+            $table_name = $wpdb->prefix . $option_table;
+            $existing_option = get_option('wp_unioo_sync_database_table_fields', []);
+            if (! is_array($existing_option)) {
+              $existing_option = [];
+            }
+
+            $allowed_types = [
+              'VARCHAR(255)',
+              'TEXT',
+              'LONGTEXT',
+              'INT',
+              'BIGINT',
+              'DATETIME',
+              'DATE',
+              'TINYINT(1)',
+            ];
+
+            $reserved_columns = [
+              'id',
+              'member_id',
+              'member_data',
+              'sync_time',
+            ];
+
+            $normalized_fields = [];
+            foreach ($value as $row) {
+              if (! is_array($row)) {
+                continue;
+              }
+
+              $column_name = sanitize_key(isset($row['name']) ? $row['name'] : '');
+              $column_type = strtoupper(sanitize_text_field(isset($row['type']) ? $row['type'] : 'VARCHAR(255)'));
+
+              if (empty($column_name) || in_array($column_name, $reserved_columns, true)) {
+                continue;
+              }
+
+              if (! in_array($column_type, $allowed_types, true)) {
+                $column_type = 'VARCHAR(255)';
+              }
+
+              $normalized_fields[$column_name] = [
+                'name' => $column_name,
+                'type' => $column_type,
+              ];
+            }
+
+            $normalized_fields = array_values($normalized_fields);
+
+            $existing_names = [];
+            foreach ($existing_option as $existing) {
+              if (! is_array($existing)) {
+                continue;
+              }
+
+              $existing_name = sanitize_key(isset($existing['name']) ? $existing['name'] : '');
+              if (! empty($existing_name)) {
+                $existing_names[] = $existing_name;
+              }
+            }
+
+            $new_names = array_map(
+              function($field) {
+                return $field['name'];
+              },
+              $normalized_fields
+            );
+
+            $columns_to_drop = array_diff($existing_names, $new_names);
+
+            if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table_name)) === $table_name) {
+              foreach ($normalized_fields as $field) {
+                $has_column = $wpdb->get_var(
+                  $wpdb->prepare(
+                    'SHOW COLUMNS FROM `' . esc_sql($table_name) . '` LIKE %s',
+                    $field['name']
+                  )
+                );
+
+                if (! $has_column) {
+                  $wpdb->query(
+                    'ALTER TABLE `' . esc_sql($table_name) . '` ADD COLUMN `' . esc_sql($field['name']) . '` ' . $field['type'] . ' NULL'
+                  );
+                }
+              }
+
+              foreach ($columns_to_drop as $column_name) {
+                if (in_array($column_name, $reserved_columns, true)) {
+                  continue;
+                }
+
+                $has_column = $wpdb->get_var(
+                  $wpdb->prepare(
+                    'SHOW COLUMNS FROM `' . esc_sql($table_name) . '` LIKE %s',
+                    $column_name
+                  )
+                );
+
+                if ($has_column) {
+                  $wpdb->query(
+                    'ALTER TABLE `' . esc_sql($table_name) . '` DROP COLUMN `' . esc_sql($column_name) . '`'
+                  );
+                }
+              }
+            }
+
+            return $normalized_fields;
+          },
+          'default' => [],
+        ]
+      );
+
       add_settings_section(
         'wp_unioo_sync_api_section',
         __('API Settings', WP_UNIOO_SYNC_TEXTDOMAIN),
@@ -205,6 +331,14 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         'wp_unioo_sync_defaul_database_table',
         __('Default Database Table', WP_UNIOO_SYNC_TEXTDOMAIN),
         [$this, 'render_default_database_table_field'],
+        'wp-unioo-sync-settings',
+        'wp_unioo_sync_api_section'
+       );
+
+       add_settings_field(
+        'wp_unioo_sync_database_table_fields',
+        __('Database Table Fields', WP_UNIOO_SYNC_TEXTDOMAIN),
+        [$this, 'render_database_table_fields_field'],
         'wp-unioo-sync-settings',
         'wp_unioo_sync_api_section'
        );
@@ -343,6 +477,140 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
       />
       <p class="description"><?php esc_html_e('Specify a custom database table for storing synced member data. If left empty, member data will be stored in user meta.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
 
+      <?php
+    }
+
+    public function render_database_table_fields_field() {
+      $option_name = 'wp_unioo_sync_database_table_fields';
+      $value = get_option($option_name, []);
+
+      if (! is_array($value)) {
+        $value = [];
+      }
+
+      $types = [
+        'VARCHAR(255)',
+        'TEXT',
+        'LONGTEXT',
+        'INT',
+        'BIGINT',
+        'DATETIME',
+        'DATE',
+        'TINYINT(1)',
+      ];
+      ?>
+
+      <table class="widefat striped" id="wp-unioo-db-fields-table" style="max-width: 900px; margin-bottom: 10px;">
+        <thead>
+          <tr>
+            <th><?php esc_html_e('Column Name', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
+            <th><?php esc_html_e('Column Type', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
+            <th><?php esc_html_e('Actions', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php if (! empty($value)) : ?>
+            <?php foreach ($value as $index => $field) : ?>
+              <?php
+              $field_name = sanitize_key(isset($field['name']) ? $field['name'] : '');
+              $field_type = strtoupper(sanitize_text_field(isset($field['type']) ? $field['type'] : 'VARCHAR(255)'));
+              if (! in_array($field_type, $types, true)) {
+                $field_type = 'VARCHAR(255)';
+              }
+              ?>
+              <tr>
+                <td>
+                  <input
+                    type="text"
+                    name="<?php echo esc_attr($option_name); ?>[<?php echo esc_attr($index); ?>][name]"
+                    value="<?php echo esc_attr($field_name); ?>"
+                    placeholder="custom_column"
+                    class="regular-text"
+                    pattern="[a-zA-Z0-9_]+"
+                  />
+                </td>
+                <td>
+                  <select name="<?php echo esc_attr($option_name); ?>[<?php echo esc_attr($index); ?>][type]">
+                    <?php foreach ($types as $type) : ?>
+                      <option value="<?php echo esc_attr($type); ?>" <?php selected($field_type, $type); ?>>
+                        <?php echo esc_html($type); ?>
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
+                </td>
+                <td>
+                  <button type="button" class="button wp-unioo-remove-db-field"><?php esc_html_e('Remove', WP_UNIOO_SYNC_TEXTDOMAIN); ?></button>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </tbody>
+      </table>
+
+      <button type="button" class="button" id="wp-unioo-add-db-field"><?php esc_html_e('Add Field', WP_UNIOO_SYNC_TEXTDOMAIN); ?></button>
+      <p class="description">
+        <?php esc_html_e('Add or remove custom columns for the configured database table. Saving this form will update the table columns.', WP_UNIOO_SYNC_TEXTDOMAIN); ?>
+      </p>
+      <p class="description">
+        <?php esc_html_e('Reserved columns (id, member_id, member_data, sync_time) cannot be changed here.', WP_UNIOO_SYNC_TEXTDOMAIN); ?>
+      </p>
+
+      <script>
+        (function() {
+          const tableBody = document.querySelector('#wp-unioo-db-fields-table tbody');
+          const addButton = document.getElementById('wp-unioo-add-db-field');
+          if (!tableBody || !addButton) {
+            return;
+          }
+
+          const optionName = <?php echo wp_json_encode($option_name); ?>;
+          const fieldTypes = <?php echo wp_json_encode($types); ?>;
+
+          const getNextIndex = function() {
+            const rows = tableBody.querySelectorAll('tr');
+            return rows.length;
+          };
+
+          const createTypeOptions = function(selectedType) {
+            return fieldTypes.map(function(type) {
+              const selected = type === selectedType ? ' selected' : '';
+              return '<option value="' + type + '"' + selected + '>' + type + '</option>';
+            }).join('');
+          };
+
+          const bindRemoveButtons = function() {
+            tableBody.querySelectorAll('.wp-unioo-remove-db-field').forEach(function(button) {
+              button.onclick = function() {
+                const row = button.closest('tr');
+                if (row) {
+                  row.remove();
+                }
+              };
+            });
+          };
+
+          addButton.addEventListener('click', function() {
+            const index = getNextIndex();
+            const row = document.createElement('tr');
+
+            row.innerHTML =
+              '<td>' +
+                '<input type="text" class="regular-text" pattern="[a-zA-Z0-9_]+" placeholder="custom_column" name="' + optionName + '[' + index + '][name]" />' +
+              '</td>' +
+              '<td>' +
+                '<select name="' + optionName + '[' + index + '][type]">' + createTypeOptions('VARCHAR(255)') + '</select>' +
+              '</td>' +
+              '<td>' +
+                '<button type="button" class="button wp-unioo-remove-db-field"><?php echo esc_js(__('Remove', WP_UNIOO_SYNC_TEXTDOMAIN)); ?></button>' +
+              '</td>';
+
+            tableBody.appendChild(row);
+            bindRemoveButtons();
+          });
+
+          bindRemoveButtons();
+        })();
+      </script>
       <?php
     }
 
