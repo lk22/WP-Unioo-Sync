@@ -102,8 +102,8 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
     }
 
     /**
-     *
      * Create user for synced unioo member
+     *
      * @param mixed $member
      * @throws UniooSyncUserNotCreatedException
      * @return bool|WP_User|null
