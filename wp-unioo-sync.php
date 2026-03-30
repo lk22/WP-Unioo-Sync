@@ -28,6 +28,7 @@ require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 use LeoKnudsen\WpUniooSync\WPUniooSyncActivator;
 use LeoKnudsen\WpUniooSync\WPUniooSyncDeactivator;
 use LeoKnudsen\WpUniooSync\WPUniooSyncAdminMenu;
+use LeoKnudsen\WpUniooSync\WPUniooSyncRestAPI;
 
 use LeoKnudsen\WpUniooSync\Admin\Unioo\UniooClient;
 use LeoKnudsen\WpUniooSync\Admin\Unioo\Sync\SyncMembersList;
@@ -39,6 +40,7 @@ register_deactivation_hook(__FILE__, [new WPUniooSyncDeactivator(), 'deactivate'
 
 add_action('plugins_loaded', function() {
   new WPUniooSyncAdminMenu();
+  new WPUniooSyncRestAPI();
 });
 
 if (isset($_REQUEST['sync_action']) && $_REQUEST['sync_action'] === 'sync_members_list') {

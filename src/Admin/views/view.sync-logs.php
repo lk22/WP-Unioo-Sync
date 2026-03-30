@@ -1,4 +1,5 @@
 <?php
+$custom_fields = get_option('wp_unioo_sync_custom_fields', []);
 ?>
 <div class="wrap">
   <h1><?php echo __('WP Unioo Sync', WP_UNIOO_SYNC_TEXTDOMAIN); ?></h1>
@@ -120,6 +121,17 @@
     syncFileDialog.close();
   })
 
+  // define allowed file types and max file size
+  const allowedFileTypes = ['text/csv', 'application/json'];
+  const maxFileSize = 5 * 1024 * 1024; // 5MB
+  const foundMembers = [];
+
+  // define allowed headers for the csv file and defined custom fields
+  const headers = [
+    'Navn', 'Email', 'Telefon', 'Fødselsdato', 'Adresse', 'By', 'Postnummer', 'Identifikation', 'Kontingenter (Navne)', 'Ubetalte regninger', 'Indmeldelsesdato', 'Udmeldelsesdato', 'Aktiv betalingsmetode', 'Nyeste note'
+  ]
+  headers.push(...Object.keys(<?php echo json_encode($custom_fields); ?>));
+
   syncFileInput.addEventListener('change', function(event) {
     let foundLines = 0;
     // clear previous output
@@ -142,23 +154,59 @@
           const lines = content.split('\n');
           lines.forEach((line, index) => {
             foundLines++;
-            console.log(`Line ${index + 1}: ${line}`);
+            // console.log(`Line ${index + 1}: ${line}`);
+
+            // when passed the first line, we can assume it's the header and skip it
+            if ( index === 0 ) {
+              return;
+            }
+
+            const memberObject = {};
+
             const cells = line.split(';');
             const row = document.createElement('tr');
-            cells.forEach(cell => {
+
+            cells.forEach((cell, cellIndex) => {
+              memberObject[headers[cellIndex]] = cell.trim();
               const td = document.createElement('td');
               td.textContent = cell.trim();
               row.appendChild(td);
             });
+
             tbody.appendChild(row);
+            foundMembers.push(memberObject);
           });
+
           output.appendChild(table);
           document.querySelector('.lines-found').textContent = `Found ${foundLines} lines in the file.`;
           output.style.display = "block";
           syncConfirmButton.style.display = "inline-block";
+          console.log(foundMembers);
       };
       reader.readAsText(file);
     }
+  })
+
+  syncConfirmButton.addEventListener('click', function(){
+    // get form data
+    console.log('Syncing members list with Unioo...', foundMembers);
+    fetch('<?php echo esc_url(rest_url('wp-unioo-sync/v1/members/import-csv')); ?>', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-WP-Nonce': '<?php echo wp_create_nonce('wp_rest'); ?>'
+      },
+      body: JSON.stringify({ members: foundMembers })
+    }).then(response => response.json())
+      .then(data => {
+        console.log('Sync response: ', data);
+        alert('Sync completed successfully!');
+        // output.innerHTML = '';
+        // output.style.display = 'none';
+        // document.querySelector('.lines-found').textContent = '';
+        // syncConfirmButton.style.display = 'none';
+        // syncFileDialog.close();
+      })
   })
 
   const syncLogsTable = document.querySelector('.wp-list-table');
