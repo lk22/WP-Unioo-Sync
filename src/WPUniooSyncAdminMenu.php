@@ -74,6 +74,19 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         ]
       );
 
+      // register required membership setting to only sync members with an active membership in Unioo
+      register_setting(
+        'wp_unioo_sync_settings_group',
+        'wp_unioo_sync_required_membership',
+        [
+          'type' => 'boolean',
+          'sanitize_callback' => function($value) {
+            return $value ? true : false;
+          },
+          'default' => false,
+        ]
+      );
+
       add_settings_section(
         'wp_unioo_sync_api_section',
         __('API Settings', WP_UNIOO_SYNC_TEXTDOMAIN),
@@ -114,7 +127,16 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         'wp-unioo-sync-settings',
         'wp_unioo_sync_api_section'
       );
+
+      add_settings_field(
+        'wp_unioo_sync_required_membership',
+        __('Required Membership', WP_UNIOO_SYNC_TEXTDOMAIN),
+        [$this, 'render_required_membership_field'],
+        'wp-unioo-sync-settings',
+        'wp_unioo_sync_api_section'
+      );
     }
+
 
     public function render_api_url() {
       $url = get_option('wp_unioo_sync_graphql_url', '');
@@ -181,6 +203,23 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
       <p class="error">
         <?php settings_errors('wp_unioo_sync_custom_fields'); ?>
       </p>
+      <?php
+    }
+
+    public function render_required_membership_field() {
+      $option_name = 'wp_unioo_sync_required_membership';
+      $value = get_option($option_name, false);
+      ?>
+      <label for="<?php echo esc_attr($option_name); ?>">
+        <input
+          type="checkbox"
+          id="<?php echo esc_attr($option_name); ?>"
+          name="<?php echo esc_attr($option_name); ?>"
+          value="1"
+          <?php checked(1, $value, true); ?>
+        />
+        <?php esc_html_e('Only syncs and creates users for members with an active membership in Unioo.', WP_UNIOO_SYNC_TEXTDOMAIN); ?>
+      </label>
       <?php
     }
 
