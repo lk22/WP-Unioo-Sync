@@ -13,7 +13,7 @@
 if (! defined('ABSPATH')) {
   exit();
 }
-
+global $wpdb;
 define('WP_UNIOO_SYNC_VERSION', '1.0.0');
 define('WP_UNIOO_SYNC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WP_UNIOO_SYNC_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -41,6 +41,17 @@ register_deactivation_hook(__FILE__, [new WPUniooSyncDeactivator(), 'deactivate'
 add_action('plugins_loaded', function() {
   new WPUniooSyncAdminMenu();
   new WPUniooSyncRestAPI();
+});
+
+add_action('admin_init', function() {
+  global $wpdb;
+  if ( get_option('wp_unioo_sync_custom_fields', false)) {
+    $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
+    foreach ($custom_fields as $key => $field) {
+      $lowercase_field = strtolower($field);
+      $wpdb->query("ALTER TABLE " . $wpdb->prefix . "unioo_members ADD COLUMN IF NOT EXISTS $lowercase_field varchar(255) DEFAULT NULL AFTER postal_code");
+    }
+  }
 });
 
 if (isset($_REQUEST['sync_action']) && $_REQUEST['sync_action'] === 'sync_members_list') {

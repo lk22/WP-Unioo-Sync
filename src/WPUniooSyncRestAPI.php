@@ -36,40 +36,41 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
       $updatedUsers = 0;
 
       // loop through the members and process the JSON data as needed
-      foreach ($members["members"] as $member) {
+      foreach ($members["members"] as $key => $member) {
         // if there is a custom table for storing the members, we can check if the table exists and if not create it, and then insert the member data into the table
         // otherwise save the member data in the default WordPress user meta or a custom post type, depending on the use case
         if ( get_option('wp_unioo_sync_members_table', false) ) {
-          $table_name = get_option('wp_unioo_sync_members_table');
+          $this->insertMemberIntoTable($member);
         } else {
 
           // make sure if there is a user in the system with the same email as the member, if not create a new user and assign a role, for example: subscriber
           // then save the member data in the user meta, for example: email, gamertag, and other relevant information from the data
           if ( $user = $this->createSynceUnioodUser($member) ) {
             $memberData = [
-              'Navn' => $member['Navn'],
+              'name' => $member['Navn'],
               'email' => $member['Email'],
-              'Telefon' => $member['Telefon'],
-              'Fødselsdato' => $member['Fødselsdato'],
-              'Adresse' => $member['Adresse'],
-              'By' => $member['By'],
-              'Postnummer' => $member['Postnummer'],
-              'Identifikation' => $member['Identifikation'],
-              'Kontingent' => $member['Kontingenter (Navne)'],
-              'Ikke betalt kontingent' => $member['Ubetalte regninger'],
-              'Indmeldelsesdato' => $member['Indmeldelsesdato'],
-              'Udmeldelsesdato' => $member['Udmeldelsesdato'],
-              'Aktiv betalingsmetode' => $member['Aktiv betalingsmetode'],
-              'Nyeste note' => $member['Nyeste note'],
+              'phone' => $member['Telefon'],
+              'birth_date' => $member['Fødselsdato'],
+              'address' => $member['Adresse'],
+              'city' => $member['By'],
+              'postal_code' => $member['Postnummer'],
+              'identification' => $member['Identifikation'],
+              'membership' => $member['Kontingenter (Navne)'],
+              'unpaid_fee' => $member['Ubetalte regninger'],
+              'member_since' => $member['Indmeldelsesdato'],
+              'left_at' => $member['Udmeldelsesdato'],
+              'active_payment_method' => $member['Aktiv betalingsmetode'],
+              'latest_note' => $member['Nyeste note'],
             ];
 
             $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
 
             if ( is_array(json_encode($custom_fields)) && count($custom_fields) > 0 ) {
               $custom_fields = get_option('wp_unioo_sync_custom_fields');
-              foreach ( $custom_fields as $field ) {
+              foreach ( $custom_fields as $key => $field ) {
                 if ( isset($member[$field]) ) {
-                  $memberData[$field] = $member[$field];
+                  $lowercase_field = strtolower($field);
+                  $memberData[$lowercase_field] = $member[$field];
                 }
               }
             }
@@ -159,6 +160,59 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
       }
 
       return $user;
+    }
+
+    public function insertMemberIntoTable($member) {
+      global $wpdb;
+      $table_name = $wpdb->prefix . 'unioo_members';
+
+      $data = [
+        'member_id' => $member['Identifikation'],
+        'name' => $member['Navn'],
+        'email' => $member['Email'],
+        'phone' => $member['Telefon'],
+        'birth_date' => $member['Fødselsdato'],
+        'address' => $member['Adresse'],
+        'city' => $member['By'],
+        'postal_code' => $member['Postnummer'],
+        'identification' => $member['Identifikation'],
+        'membership' => $member['Kontingenter (Navne)'],
+        'unpaid_fee' => $member['Ubetalte regninger'],
+        'member_since' => $member['Indmeldelsesdato'],
+        'left_at' => $member['Udmeldelsesdato'],
+        'active_payment_method' => $member['Aktiv betalingsmetode'],
+        'latest_note' => $member['Nyeste note'],
+        'sync_time' => current_time('mysql'),
+      ];
+
+      // Check if the member already exists in the table
+      $existing_member = $wpdb->get_row(
+        $wpdb->prepare("SELECT * FROM $table_name WHERE member_id = %s", [$data['member_id']])
+      );
+
+      if ( $existing_member ) {
+        // Update existing member
+        $wpdb->update(
+          $table_name,
+          $data,
+          ['id' => $existing_member->id],
+          [
+            '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s',
+            '%s', '%s', '%s', '%s', '%s', '%s', '%s',
+          ],
+          ['%d']
+        );
+      } else {
+        // Insert new member
+        $wpdb->insert(
+          $table_name,
+          $data,
+          [
+            '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s',
+            '%s', '%s', '%s', '%s', '%s', '%s', '%s',
+          ]
+        );
+      }
     }
 
     /**
