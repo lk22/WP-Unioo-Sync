@@ -120,7 +120,7 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
             if ( ! empty($value) && $wpdb->get_var("SHOW TABLES LIKE '$table_name'") !== $table_name ) {
               // Table does not exist, create it
               $charset_collate = $wpdb->get_charset_collate();
-              $sql = "CREATE TABLE $table_name (
+              $sql = "CREATE TABLE IF NOT EXISTS $table_name (
                 id mediumint(9) NOT NULL AUTO_INCREMENT,
                 member_id varchar(50) NOT NULL,
                 member_data longtext NOT NULL,

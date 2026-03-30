@@ -31,6 +31,10 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
 
       $members = $request->get_params(); // Ensure file parameters are available in the request
 
+      $createdUsers = 0;
+      $deletedUsers = 0;
+      $updatedUsers = 0;
+
       // loop through the members and process the JSON data as needed
       foreach ($members["members"] as $member) {
         // if there is a custom table for storing the members, we can check if the table exists and if not create it, and then insert the member data into the table
@@ -73,8 +77,7 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
             foreach ( $memberData as $key => $value ) {
               update_user_meta($user->ID, $key, $value);
             }
-            $log_message = 'Successfully synced member: ' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided');
-            $this->logSyncStatus('success', $log_message);
+            $createdUsers++;
 
           } else {
             $this->logSyncStatus(
@@ -114,16 +117,21 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
 
       if ( ! $user ) {
         if ( get_option('wp_unioo_sync_required_membership', false) && $member['Ubetalte regninger'] === "Ja" ) {
+          $log_message = 'Member has unpaid bills, skipping user creation' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided');
+          $this->logSyncStatus('success', $log_message);
           return ["success" => false, "message" => 'Member has unpaid bills, skipping user creation.'];
         }
 
         $user_id = wp_create_user($member['Email'], wp_generate_password(), $member['Email']);
         if (is_wp_error($user_id)) {
+          $log_message = 'Failed to create user: ' . $user_id->get_error_message() . ' for member: ' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided');
+          $this->logSyncStatus('failure', $log_message);
           return ["success" => false, "message" => 'Failed to create user: ' . $user_id->get_error_message()];
         }
 
         $user = get_user_by('id', $user_id);
         $user->set_role('subscriber');
+        $this->logSyncStatus('success', 'User created successfully for member: ' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided'));
       }
 
       return $user;

@@ -201,11 +201,11 @@ $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
       .then(data => {
         console.log('Sync response: ', data);
         alert('Sync completed successfully!');
-        // output.innerHTML = '';
-        // output.style.display = 'none';
-        // document.querySelector('.lines-found').textContent = '';
-        // syncConfirmButton.style.display = 'none';
-        // syncFileDialog.close();
+        output.innerHTML = '';
+        output.style.display = 'none';
+        document.querySelector('.lines-found').textContent = '';
+        syncConfirmButton.style.display = 'none';
+        syncFileDialog.close();
       })
   })
 
