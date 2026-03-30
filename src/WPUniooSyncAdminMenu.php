@@ -12,6 +12,7 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
       add_action('admin_init', [$this, 'register_settings']);
     }
 
+    // Register settings for API key and GraphQL endpoint URL
     public function register_settings() {
       register_setting(
         'wp_unioo_sync_settings_group',
@@ -23,6 +24,7 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         ]
       );
 
+      // Register setting for GraphQL endpoint URL
       register_setting(
         'wp_unioo_sync_settings_group',
         'wp_unioo_sync_graphql_url',
@@ -33,6 +35,7 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         ]
       );
 
+      // Register setting for auto-generating API key on unauthorized response
       register_setting(
         'wp_unioo_sync_settings_group',
         'wp_unioo_sync_auto_generate_token_on_unauthorization',
@@ -42,6 +45,32 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
             return $value ? true : false;
           },
           'default'           => false,
+        ]
+      );
+
+      // Register custom fields setting for future extensibility
+      register_setting(
+        'wp_unioo_sync_settings_group',
+        'wp_unioo_sync_custom_fields',
+        [
+          'type' => 'array',
+          'sanitize_callback' => function($value) {
+            if (is_string($value)) {
+              $decoded = json_decode($value, true);
+              if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+              } else {
+                add_settings_error(
+                  'wp_unioo_sync_custom_fields',
+                  'invalid_json',
+                  __('Invalid JSON format for custom fields.', WP_UNIOO_SYNC_TEXTDOMAIN),
+                  'error'
+                );
+                return [];
+              }
+            }
+          },
+          'default' => [],
         ]
       );
 
@@ -74,6 +103,14 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         'wp_unioo_sync_auto_generate_token_on_unauthorization',
         __('Auto-Generate API Key on Unauthorized Response', WP_UNIOO_SYNC_TEXTDOMAIN),
         [$this, 'render_auto_generate_token_field'],
+        'wp-unioo-sync-settings',
+        'wp_unioo_sync_api_section'
+      );
+
+      add_settings_field(
+        'wp_unioo_sync_custom_fields',
+        __('Custom Fields', WP_UNIOO_SYNC_TEXTDOMAIN),
+        [$this, 'render_custom_fields_field'],
         'wp-unioo-sync-settings',
         'wp_unioo_sync_api_section'
       );
@@ -122,6 +159,28 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         />
         <?php esc_html_e('Automatically generate a new API key if an unauthorized response is received during sync.', WP_UNIOO_SYNC_TEXTDOMAIN); ?>
       </label>
+      <?php
+    }
+
+    public function render_custom_fields_field() {
+      $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
+      ?>
+      <textarea
+        id="wp_unioo_sync_custom_fields"
+        name="wp_unioo_sync_custom_fields"
+        rows="5"
+        cols="50"
+        class="large-text code"
+      ><?php echo esc_textarea(json_encode($custom_fields, JSON_PRETTY_PRINT)); ?></textarea>
+      <p class="description">
+        <?php esc_html_e('This allows you to specify additional fields that should be included in the sync process. it will be supported for JSON and CSV imports', WP_UNIOO_SYNC_TEXTDOMAIN); ?>
+      </p>
+      <p class="description">
+        <?php esc_html_e('Enter the custom fields in JSON format. Example: {"field_name": "Field Label", "another_field": "Another Field Label"}', WP_UNIOO_SYNC_TEXTDOMAIN); ?>
+      </p>
+      <p class="error">
+        <?php settings_errors('wp_unioo_sync_custom_fields'); ?>
+      </p>
       <?php
     }
 

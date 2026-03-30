@@ -30,7 +30,6 @@ if ( ! class_exists('UniooClient') ) {
         ],
       };
     }
-
     public function refresh_api_token(): void {
       $endpoint = "https://https://api.unioo.io/api/refresh-token";
       $response = wp_remote_post($endpoint, [

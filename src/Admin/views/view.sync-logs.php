@@ -47,13 +47,13 @@
       <input type="file" name="sync_file" id="sync-file-input" accept=".csv, .json" />
     </form>
     <h2><?php echo __('Sync Instructions', WP_UNIOO_SYNC_TEXTDOMAIN); ?></h2>
-    <p><?php echo __('To sync your members list, please upload a CSV file with the following columns: identification, userId, type, name, birthDate, address, postalCode, city, callingCode, email, phoneNumber, memberSince, status, invitationDate.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+    <p><?php echo __('To sync your members list, please upload a CSV file with the following columns: Navn, Email, Telefon, Fødselsdato, Adresse, By, Postnummer, Identifikation, Kontingenter (Navne), Ubetalte regninger, Indmeldelsesdato, Udmeldelsesdato, Aktiv betalingsmetode, Nyeste note, Gamertag, Kommune, Køn.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
     <p><?php echo __('Make sure the file is properly formatted and contains all required fields for a successful sync.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
     <p class="lines-found"></p>
     <div id="output" style="white-space: pre-wrap; background: #f0f0f0; padding: 10px; border: 1px solid #ccc;"></div>
   </div>
   <div class="dialog-footer">
-    <button id="sync-confirm-button" class="button button-primary"><?php echo __('Confirm', WP_UNIOO_SYNC_TEXTDOMAIN); ?></button>
+    <button id="sync-confirm-button" class="button button-primary"><?php echo __('Sync members', WP_UNIOO_SYNC_TEXTDOMAIN); ?></button>
     <button id="sync-cancel-button" class="button"><?php echo __('Cancel', WP_UNIOO_SYNC_TEXTDOMAIN); ?></button>
   </div>
 </dialog>
@@ -65,6 +65,7 @@
     width: 100vw;
     height: auto;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
 
     .dialog-header {
       margin-bottom: 20px;
@@ -78,6 +79,13 @@
       display: flex;
       justify-content: flex-start;
       gap: 10px;
+      position: fixed;
+      bottom: 0px;
+      background-color: #ccc;
+      padding: 15px;
+      width: 100%;
+      left: 0;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     }
 
     .lines-found {
@@ -93,6 +101,9 @@
   const syncFileInput = document.getElementById('sync-file-input');
   const output = document.getElementById('output');
 
+  output.style.display = 'none';
+  syncConfirmButton.style.display = 'none';
+
   const syncButton = document.querySelector('.sync-button');
 
   syncButton.addEventListener('click', function() {
@@ -103,6 +114,7 @@
 
   syncCancelButton.addEventListener('click', function(){
     output.innerHTML = '';
+    output.style.display = 'none';
     document.querySelector('.lines-found').textContent = '';
 
     syncFileDialog.close();
@@ -142,6 +154,8 @@
           });
           output.appendChild(table);
           document.querySelector('.lines-found').textContent = `Found ${foundLines} lines in the file.`;
+          output.style.display = "block";
+          syncConfirmButton.style.display = "inline-block";
       };
       reader.readAsText(file);
     }
