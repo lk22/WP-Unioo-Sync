@@ -19,12 +19,18 @@ if ( ! class_exists('SyncMembersList') ) {
     public function execute(): array {
       global $wpdb;
       $response = $this->unioo_client->send_sync_request('sync_members');
+
+      if ( ! $response["success"] === true && isset($response['message']) && str_contains($response['message'], 'Unauthorized') ) {
+        $this->unioo_client->refresh_api_token();
+        $response = $this->unioo_client->send_sync_request('sync_members');
+      }
+
       $wpdb->insert(
         "wp_unioo_sync",
         [
           'sync_status' => 'success',
           'sync_time' => current_time('mysql'),
-          'sync_message' => $response['message'],
+          'sync_message' => "Unioo API sync: " . $response['message'],
         ],
         [
           '%s',

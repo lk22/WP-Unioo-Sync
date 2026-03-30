@@ -30,11 +30,16 @@ if ( ! class_exists('UniooClient') ) {
         ],
       };
     }
+
+    /**
+     * Refreshing api token from API endpoint
+     *
+     * @return void
+     */
     public function refresh_api_token(): void {
       $endpoint = "https://https://api.unioo.io/api/refresh-token";
       $response = wp_remote_post($endpoint, [
         'headers' => [
-          'Authorization' => 'Bearer ' . $this->bearer_token,
           'Content-Type' => 'application/json',
         ],
         'body' => json_encode([

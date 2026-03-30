@@ -42,9 +42,9 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
         if ( get_option('wp_unioo_sync_members_table', false) ) {
           $table_name = get_option('wp_unioo_sync_members_table');
         } else {
+
           // make sure if there is a user in the system with the same email as the member, if not create a new user and assign a role, for example: subscriber
           // then save the member data in the user meta, for example: email, gamertag, and other relevant information from the data
-
           if ( $user = $this->createSynceUnioodUser($member) ) {
             $memberData = [
               'Navn' => $member['Navn'],
@@ -126,7 +126,9 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
         if ( empty($password) ) {
           $password = wp_generate_password();
         } else {
-          $password = sanitize_text_field($password);
+          $password = sanitize_text_field(
+            $member[str_replace(['{{', '}}'], '', get_option('wp_unioo_sync_default_password_field', 'password'))]
+          );
         }
 
         $user_id = wp_create_user($member['Email'], $password, $member['Email']);
