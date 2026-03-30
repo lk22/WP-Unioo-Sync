@@ -73,6 +73,9 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
             foreach ( $memberData as $key => $value ) {
               update_user_meta($user->ID, $key, $value);
             }
+            $log_message = 'Successfully synced member: ' . $member['Email'] . ' - ' . ($member['Navn'] ?? 'No name provided');
+            $this->logSyncStatus('success', $log_message);
+
           } else {
             $this->logSyncStatus(
               'failure',

@@ -5,6 +5,8 @@ if ( ! defined('ABSPATH') ) {
   exit();
 }
 
+require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
 if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
   class WPUniooSyncAdminMenu {
     public function __construct() {
@@ -87,6 +89,53 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         ]
       );
 
+      register_setting(
+        'wp_unioo_sync_settings_group',
+        'wp_unioo_sync_user_default_username_field',
+        [
+          'type' => 'string',
+          'sanitize_callback' => 'sanitize_text_field',
+          'default' => ''
+        ]
+      );
+
+      register_setting(
+        'wp_unioo_sync_settings_group',
+        'wp_unioo_sync_user_default_password_field',
+        [
+          'type' => 'string',
+          'sanitize_callback' => 'sanitize_text_field',
+          'default' => 'generate_random'
+        ]
+      );
+
+      register_setting(
+        'wp_unioo_sync_settings_group',
+        'wp_unioo_sync_defaul_database_table',
+        [
+          'type' => 'string',
+          'sanitize_callback' => function($value) {
+            global $wpdb;
+            $table_name = $wpdb->prefix . sanitize_key($value);
+            if ( ! empty($value) && $wpdb->get_var("SHOW TABLES LIKE '$table_name'") !== $table_name ) {
+              // Table does not exist, create it
+              $charset_collate = $wpdb->get_charset_collate();
+              $sql = "CREATE TABLE $table_name (
+                id mediumint(9) NOT NULL AUTO_INCREMENT,
+                member_id varchar(50) NOT NULL,
+                member_data longtext NOT NULL,
+                sync_time datetime NOT NULL,
+                PRIMARY KEY  (id)
+              ) $charset_collate;";
+
+              dbDelta($sql);
+            }
+            return sanitize_text_field($value);
+          },
+          'default' => ''
+        ]
+      );
+
       add_settings_section(
         'wp_unioo_sync_api_section',
         __('API Settings', WP_UNIOO_SYNC_TEXTDOMAIN),
@@ -135,6 +184,30 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         'wp-unioo-sync-settings',
         'wp_unioo_sync_api_section'
       );
+
+      add_settings_field(
+        'wp_unioo_sync_user_default_username_field',
+        __('Default Username Field', WP_UNIOO_SYNC_TEXTDOMAIN),
+        [$this, 'render_default_username_field'],
+        'wp-unioo-sync-settings',
+        'wp_unioo_sync_api_section'
+      );
+
+      add_settings_field(
+        'wp_unioo_sync_user_default_password_field',
+        __('Default User Password Field', WP_UNIOO_SYNC_TEXTDOMAIN),
+        [$this, 'render_default_user_password_field'],
+        'wp-unioo-sync-settings',
+        'wp_unioo_sync_api_section'
+      );
+
+      add_settings_field(
+        'wp_unioo_sync_defaul_database_table',
+        __('Default Database Table', WP_UNIOO_SYNC_TEXTDOMAIN),
+        [$this, 'render_default_database_table_field'],
+        'wp-unioo-sync-settings',
+        'wp_unioo_sync_api_section'
+       );
     }
 
 
@@ -220,6 +293,56 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         />
         <?php esc_html_e('Only syncs and creates users for members with an active membership in Unioo.', WP_UNIOO_SYNC_TEXTDOMAIN); ?>
       </label>
+      <?php
+    }
+
+    public function render_default_username_field() {
+      $option_name = 'wp_unioo_sync_user_default_username_field';
+      $value = get_option($option_name, '');
+      ?>
+      <input
+        type="text"
+        id="<?php echo esc_attr($option_name); ?>"
+        name="<?php echo esc_attr($option_name); ?>"
+        value="<?php echo esc_attr($value); ?>"
+        class="regular-text"
+      />
+      <p class="description"><?php esc_html_e('Specify the default field from the Unioo member data to use as the WordPress username when creating users during sync.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+      <p class="description"><?php esc_html_e('Add the field as {{field_name}}', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+      <?php
+    }
+
+    public function render_default_user_password_field() {
+      $option_name = 'wp_unioo_sync_user_default_password_field';
+      $value = get_option($option_name, 'generate_random');
+      ?>
+      <input
+        type="text"
+        id="<?php echo esc_attr($option_name); ?>"
+        name="<?php echo esc_attr($option_name); ?>"
+        value="<?php echo esc_attr($value); ?>"
+        class="regular-text"
+      />
+      <p class="description"><?php esc_html_e('Specify the default password to assign to users created during sync. Default is "generate_random", which will create a random password for each user.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+      <p class="description"><?php esc_html_e('You can also specify a fixed password or use a field from the Unioo member data by adding it as {{field_name}}', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+      <?php
+    }
+
+    public function render_default_database_table_field() {
+      global $wpdb;
+      $option_name = 'wp_unioo_sync_defaul_database_table';
+      $value = get_option($option_name, '');
+      ?>
+      <?php echo $wpdb->prefix;?>
+      <input
+        type="text"
+        id="<?php echo esc_attr($option_name); ?>"
+        name="<?php echo esc_attr($option_name); ?>"
+        value="<?php echo esc_attr($value); ?>"
+        class="regular-text"
+      />
+      <p class="description"><?php esc_html_e('Specify a custom database table for storing synced member data. If left empty, member data will be stored in user meta.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+
       <?php
     }
 
