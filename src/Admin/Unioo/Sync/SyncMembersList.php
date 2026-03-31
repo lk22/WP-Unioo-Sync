@@ -7,6 +7,7 @@ if ( ! defined('ABSPATH') ) {
 }
 
 use LeoKnudsen\WpUniooSync\Admin\Unioo\UniooClient;
+use LeoKnudsen\WpUniooSync\Admin\Unioo\Sync\MemberProcessor;
 
 if ( ! class_exists('SyncMembersList') ) {
   class SyncMembersList {
@@ -41,6 +42,11 @@ if ( ! class_exists('SyncMembersList') ) {
 
       $client = new UniooClient(get_option('wp_unioo_sync_api_url'), get_option('wp_unioo_sync_bearer_token'));
       $response = $client->send_sync_request('sync_members');
+      $processor = new MemberProcessor();
+
+      if ( ! false === $response['success']) {
+        $results = $processor->processBatch($response["data"]["nodes"]);
+      }
 
       /**
        * if the sync request failed due to unauthorized error, attempt to authenticate and retry the synchronization request.
@@ -64,6 +70,10 @@ if ( ! class_exists('SyncMembersList') ) {
 
         $client->authenticate();
         $response = $client->sync_members();
+
+        if ( ! false === $response['success']) {
+          $results = $processor->processBatch($response["data"]["nodes"]);
+        }
 
          if (false === $response['success']) {
            $wpdb->insert('wp_unioo_sync', [
@@ -92,6 +102,56 @@ if ( ! class_exists('SyncMembersList') ) {
           '%s',
         ]
       );
+
+      return $response;
+    }
+
+    public function fetchAllMembers(): \Generator {
+      $cursor = null;
+
+      do {
+        $result = $this->fetchPage($cursor);
+        if ($result === null) return;
+        foreach ($result['data']['nodes'] as $member) {
+          yield $member;
+        }
+        $cursor = $result['data']['pageInfo']['endCursor'] ?? null;
+        $hasNextPage = $result['data']['pageInfo']['hasNextPage'] ?? false;
+      } while ($hasNextPage && $cursor !== null);
+
+
+      $response = $this->unioo_client->send_sync_request('sync_members');
+
+      if ( false === $response['success'] ) {
+        return [];
+      }
+
+      $results = [
+        'created' => 0,
+        'updated' => 0,
+        'failed' => 0,
+      ];
+
+      foreach ($response["data"]["nodes"] as $member) {
+        $result = (new MemberProcessor())->process($member);
+        $status = $result['status'] ?? 'failed';
+        $results[$status]++;
+      }
+
+      return $results;
+    }
+
+    public function fetchPage(?string $cursor): ?array {
+      $variables = [
+        'first' => 100,
+        'after' => $cursor,
+      ];
+
+      $response = $this->unioo_client->send_sync_request('sync_members', $variables);
+
+      if ( false === $response['success'] ) {
+        return null;
+      }
 
       return $response;
     }

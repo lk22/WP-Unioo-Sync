@@ -22,9 +22,9 @@ if ( ! class_exists('UniooClient') ) {
      * @param string $action default is 'sync_members', can be extended in the future for other sync actions
      * @return array
      */
-    public function send_sync_request(string $action = 'sync_members'): array {
+    public function send_sync_request(string $action = 'sync_members', ?array $variables = []): array {
       return match($action) {
-        'sync_members' => $this->sync_members(),
+        'sync_members' => $this->sync_members($variables),
         'default' => [
           'success' => false,
           'message' => __('Invalid sync action specified.', WP_UNIOO_SYNC_TEXTDOMAIN),
@@ -102,8 +102,56 @@ if ( ! class_exists('UniooClient') ) {
      * fetching member from unioo and return the response
      * @return array{data: mixed, success: bool|array{message: mixed, success: bool}|array{message: string, success: bool}}
      */
-    public function sync_members(): array {
+    public function sync_members($variables = []): array {
       $endpoint = "https://api.unioo.io/graphql";
+      $custom_fields = '';
+      if ( get_option('wp_unioo_sync_custom_fields') ) {
+        $custom_fields .= '
+          customFieldValues {
+            customField {
+              id
+              name
+            }
+            value
+          }
+        ';
+      }
+
+      $query = '
+        query listOverviewMembers($first: Int, $after: String, $order: [ListOverviewMemberSortInput!], $where: ListOverviewMemberFilterInput, $subscriptionId: UUID) {
+          data: listOverviewMembers(
+            first: $first
+            after: $after
+            order: $order
+            where: $where
+            subscriptionId: $subscriptionId
+          ) {
+            totalCount
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            nodes {
+              id
+              identification
+              userId
+              type
+              name
+              birthDate
+              address
+              postalCode
+              city
+              callingCode
+              email
+              phoneNumber
+              memberSince
+              status
+              invitationDate
+              ' . $custom_fields . '
+            }
+          }
+        },';
+
       $response = wp_remote_post($endpoint, [
         'headers' => [
           'Authorization' => 'Bearer ' . $this->bearer_token,
@@ -112,43 +160,57 @@ if ( ! class_exists('UniooClient') ) {
         'body' => json_encode([
           'query' => '
             query listOverviewMembers($first: Int, $after: String, $order: [ListOverviewMemberSortInput!], $where: ListOverviewMemberFilterInput, $subscriptionId: UUID) {
-              data: listOverviewMembers(
-                first: $first
-                after: $after
-                order: $order
-                where: $where
-                subscriptionId: $subscriptionId
-              ) {
-                totalCount
-                pageInfo {
-                  hasNextPage
-                  endCursor
+            data: listOverviewMembers(
+              first: $first
+              after: $after
+              order: $order
+              where: $where
+              subscriptionId: $subscriptionId
+            ) {
+              totalCount
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+              nodes {
+                id
+                identification
+                userId
+                type
+                name
+                birthDate
+                address
+                postalCode
+                city
+                callingCode
+                email
+                phoneNumber
+                memberSince
+                status
+                paymentMethod {
+                  isExpired
+                  hasError
                 }
-                nodes {
-                  id
-                  identification
-                  userId
-                  type
-                  name
-                  birthDate
-                  address
-                  postalCode
-                  city
-                  callingCode
-                  email
-                  phoneNumber
-                  memberSince
-                  status
-                  invitationDate
+                invitationDate
+                hasUnpaidInvoices
+                customFieldValues {
+                  customField {
+                    id
+                    name
+                  }
+                  ... on CustomTextFieldValue {
+                    text
+                  }
                 }
               }
-            },
+            }
+          },
           ',
           'variables' => [
             'first' => 11,
-            'after' => null,
-            'where' => null,
-            'subscriptionId' => null,
+            'after' => $variables['after'] ?? null,
+            'where' => $variables['where'] ?? null,
+            'subscriptionId' => $variables['subscriptionId'] ?? null,
           ],
         ]),
       ]);
@@ -166,14 +228,14 @@ if ( ! class_exists('UniooClient') ) {
       if (isset($data['errors'])) {
           return [
             'success' => false,
-            'message' => __('Unauthorized access. Please check your Unioo API token.', WP_UNIOO_SYNC_TEXTDOMAIN),
+            'message' => __($data['errors'][0]['message'], WP_UNIOO_SYNC_TEXTDOMAIN),
           ];
       }
 
       return [
         'success' => true,
         'message' => __('Members list synced successfully.', WP_UNIOO_SYNC_TEXTDOMAIN),
-        'data' => $data
+        'data' => $data['data']['data']
       ];
     }
   }
