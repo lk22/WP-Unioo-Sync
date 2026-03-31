@@ -50,6 +50,26 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         ]
       );
 
+      register_setting(
+        'wp_unioo_sync_settings_group',
+        'wp_unioo_sync_username',
+        [
+          'type' => 'string',
+          'sanitize_callback' => 'sanitize_text_field',
+          'default' => ''
+        ]
+      );
+
+      register_setting(
+        'wp_unioo_sync_settings_group',
+        'wp_unioo_sync_password',
+        [
+          'type' => 'string',
+          'sanitize_callback' => 'sanitize_text_field',
+          'default' => ''
+        ]
+      );
+
       // Register custom fields setting for future extensibility
       register_setting(
         'wp_unioo_sync_settings_group',
@@ -155,6 +175,22 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
       );
 
       add_settings_field(
+        'wp_unioo_sync_username',
+        __('Unioo username', WP_UNIOO_SYNC_TEXTDOMAIN),
+        [$this, 'render_username_field'],
+        'wp-unioo-sync-settings',
+        'wp_unioo_sync_api_section'
+      );
+
+      add_settings_field(
+        'wp_unioo_sync_password',
+        __('Unioo password', WP_UNIOO_SYNC_TEXTDOMAIN),
+        [$this, 'render_password_field'],
+        'wp-unioo-sync-settings',
+        'wp_unioo_sync_api_section'
+       );
+
+      add_settings_field(
         'wp_unioo_sync_custom_fields',
         __('Custom Fields', WP_UNIOO_SYNC_TEXTDOMAIN),
         [$this, 'render_custom_fields_field'],
@@ -242,6 +278,33 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
       <?php
     }
 
+    public function render_username_field() {
+      $username = get_option('wp_unioo_sync_username', '');
+      ?>
+      <input
+        type="text"
+        id="wp_unioo_sync_username"
+        name="wp_unioo_sync_username"
+        value="<?php echo esc_attr($username); ?>"
+        class="regular-text"
+      />
+      <?php
+    }
+
+    public function render_password_field() {
+      $password = get_option('wp_unioo_sync_password', '');
+      ?>
+      <input
+        type="password"
+        id="wp_unioo_sync_password"
+        name="wp_unioo_sync_password"
+        value="<?php echo esc_attr($password); ?>"
+        class="regular-text"
+        autocomplete="off"
+      />
+      <?php
+    }
+
     public function render_custom_fields_field() {
       $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
       ?>
@@ -278,7 +341,7 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
           <?php checked(1, $value, true); ?>
         />
         <p><?php esc_html_e('Store synced members in a custom database table instead of user meta. This is useful for large member lists or if you want to keep the data separate from WordPress users.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
-        <p><?php esc_html_e('Note: If enabled, the plugin will create following table ' . $wpdb->prefix . 'unioo_sync_members in the WordPress database to store member data. Make sure to run the sync process after enabling this option to populate the table with member data.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+        <p><?php esc_html_e('Note: If enabled, the plugin will create following table ' . $wpdb->prefix . 'unioo_members in the WordPress database to store member data. Make sure to run the sync process after enabling this option to populate the table with member data.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
       </label>
       <?php
     }

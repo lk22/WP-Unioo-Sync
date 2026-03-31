@@ -18,6 +18,7 @@ if ( ! class_exists('UniooClient') ) {
 
     /**
      * sending syncronization request
+     *
      * @param string $action default is 'sync_members', can be extended in the future for other sync actions
      * @return array
      */
@@ -31,13 +32,47 @@ if ( ! class_exists('UniooClient') ) {
       };
     }
 
+    public function authenticate() {
+      $endpoint = "https://api.unioo.io/api/authenticate/password";
+      $response = wp_remote_post($endpoint, [
+        'headers' => [
+          'Content-Type' => 'application/json',
+        ],
+        'body' => json_encode([
+          "username" => get_option('wp_unioo_sync_username', 'default_username'),
+          "password" => get_option('wp_unioo_sync_password', 'default_password')
+        ]),
+      ]);
+
+      if ( is_wp_error($response) ) {
+        error_log('Failed to authenticate with Unioo API: ' . $response->get_error_message());
+      }
+
+      $body = wp_remote_retrieve_body($response);
+      $data = json_decode($body, true);
+
+      if ( ! isset($data["token"]) ) {
+        error_log('Failed to authenticate with Unioo API: ' . ($data['message'] ?? 'Unknown error'));
+      }
+
+      $retrieved_token = sanitize_text_field($data['token']);
+
+      if ( ! $retrieved_token ) {
+        error_log('Failed to retrieve API token from Unioo API response.');
+      }
+
+      update_option('wp_unioo_sync_bearer_token', $retrieved_token);
+      $this->bearer_token = $retrieved_token;
+      return $this->bearer_token;
+    }
+
     /**
      * Refreshing api token from API endpoint
      *
      * @return void
      */
     public function refresh_api_token(): void {
-      $endpoint = "https://https://api.unioo.io/api/refresh-token";
+      $endpoint = "https://api.unioo.io/api/refresh-token";
       $response = wp_remote_post($endpoint, [
         'headers' => [
           'Content-Type' => 'application/json',
@@ -68,7 +103,7 @@ if ( ! class_exists('UniooClient') ) {
      * @return array{data: mixed, success: bool|array{message: mixed, success: bool}|array{message: string, success: bool}}
      */
     public function sync_members(): array {
-      $endpoint = $this->api_url . '/graphql';
+      $endpoint = "https://api.unioo.io/graphql";
       $response = wp_remote_post($endpoint, [
         'headers' => [
           'Authorization' => 'Bearer ' . $this->bearer_token,
@@ -138,7 +173,7 @@ if ( ! class_exists('UniooClient') ) {
       return [
         'success' => true,
         'message' => __('Members list synced successfully.', WP_UNIOO_SYNC_TEXTDOMAIN),
-        'data' => $data['data']['listOverviewMembers'] ?? [],
+        'data' => $data
       ];
     }
   }
