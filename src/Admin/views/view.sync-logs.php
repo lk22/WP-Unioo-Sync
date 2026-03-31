@@ -16,9 +16,9 @@ $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
     <thead>
       <tr>
         <th><?php echo __('ID', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
-        <th><?php echo __('Status', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
-        <th><?php echo __('Time', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
         <th><?php echo __('Message', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
+        <th><?php echo __('Time', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
+        <th><?php echo __('Status', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
       </tr>
     </thead>
     <tbody>
@@ -26,9 +26,9 @@ $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
         <?php foreach ( $sync_logs as $log ) : ?>
           <tr>
             <td><?php echo esc_html( $log->id ); ?></td>
-            <td><?php echo esc_html( $log->sync_status ); ?></td>
-            <td><?php echo esc_html( date('Y-m-d H:i:s', strtotime($log->sync_time) + 2 * 3600) ); ?></td>
             <td><?php echo esc_html( $log->sync_message ); ?></td>
+            <td><?php echo esc_html( date('Y-m-d H:i:s', strtotime($log->sync_time) + 2 * 3600) ); ?></td>
+            <td><?php echo esc_html( $log->sync_status ); ?></td>
           </tr>
         <?php endforeach; ?>
       <?php endif; ?>
