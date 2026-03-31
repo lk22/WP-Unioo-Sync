@@ -15,7 +15,7 @@ $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
   <table class="wp-list-table widefat fixed striped">
     <thead>
       <tr>
-        <th><?php echo __('ID', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
+        <th><?php echo __('Log ID', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
         <th><?php echo __('Message', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
         <th><?php echo __('Time', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
         <th><?php echo __('Status', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>

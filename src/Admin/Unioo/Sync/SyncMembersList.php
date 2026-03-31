@@ -143,7 +143,7 @@ if ( ! class_exists('SyncMembersList') ) {
 
     public function fetchPage(?string $cursor): ?array {
       $variables = [
-        'first' => 100,
+        'first' => 10,
         'after' => $cursor,
       ];
 

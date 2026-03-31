@@ -14,6 +14,13 @@ require_once ABSPATH . 'wp-includes/pluggable.php';
 if ( ! class_exists('MemberProcessor') ) {
   class MemberProcessor
   {
+    /**
+     * Check if a member is active based on the status field
+     * if the status field is missing, assume the member is not active to prevent creating users for members that are not active
+     *
+     * @param mixed $member
+     * @return bool
+     */
     public function isActiveMember($member): bool
     {
       if ( ! isset($member['status']) ) {
@@ -23,54 +30,23 @@ if ( ! class_exists('MemberProcessor') ) {
       return $member['status'] === 'ACTIVE' ? true : false;
     }
 
+    /**
+     * Check if the member is expired
+     * @todo make sure to check the paymentMethod isExpired field
+     *
+     * @param mixed $member
+     * @return bool
+     */
     public function isMemberExpired($member): bool
     {
       return false;
     }
 
-    public function process(array $member): string
-    {
-      $isActive = $this->isActiveMember($member);
-      $existingUser = get_user_by('email', $member['email']);
-
-      if ( ! $isActive ) {
-        if ( $existingUser ) {
-          wp_delete_user($existingUser->ID);
-          return 'deleted';
-        }
-
-        return 'skipped';
-      }
-
-      if ($result = $this->createSyncedUser($member)) {
-        $memberData = [
-          'name' => $member['name'],
-          'email' => $member['email'],
-          'phone' => $member['phoneNumber'] ?? null,
-          'birth_date' => $member['birthDate'] ?? null,
-          'address' => $member['address'] ?? null,
-          'city' => $member['city'] ?? null,
-          'postal_code' => $member['postalCode'] ?? null,
-          'identification' => $member['identification'] ?? null,
-          'membership' => $member['membership'] ?? null,
-          'unpaid_fee' => $member['unpaidFee'] ?? null,
-        ];
-      } else {
-        return 'skipped';
-      }
-
-
-      $result = $this->createSyncedUser($member);
-
-
-      if ( null === $result ) {
-        return 'skipped';
-      }
-
-      $this->insertUpdateIntoTable($member, $result['user']->ID);
-      return $result['isNew'] ? 'created' : 'updated';
-    }
-
+    /**
+     * fetching username field for member user creation
+     *
+     * @return array|string
+     */
     public function getUsernameField(): string
     {
       if ( get_option('wp_unioo_sync_user_default_username_field')) {
@@ -84,6 +60,12 @@ if ( ! class_exists('MemberProcessor') ) {
       return 'email';
     }
 
+    /**
+     * Getting password field for use as default password field value
+     * default is randome generated password by WordPress
+     *
+     * @return array|string
+     */
     public function getPasswordField(): string
     {
       if ( get_option('wp_unioo_sync_user_default_password_field')) {
@@ -97,6 +79,86 @@ if ( ! class_exists('MemberProcessor') ) {
       return wp_generate_password();
     }
 
+    /**
+     * the process of a member from af batch of fetched members
+     * @param array $member
+     * @return string
+     */
+    public function process(array $member): string
+    {
+      $isActive = $this->isActiveMember($member);
+      $existingUser = get_user_by('email', $member['email']);
+
+      /**
+       * Delete user if the member is not active but exists as a user, this prevents non payed users have access
+       */
+      if ( ! $isActive ) {
+        if ( $existingUser ) {
+          wp_delete_user($existingUser->ID);
+          return 'deleted';
+        }
+
+        return 'skipped';
+      }
+
+      /**
+       * Save the member data if the user is created or updated successfully, if the user creation or update is skipped, do not save the member data to prevent having member data without a corresponding user, which could lead to orphaned member records and potential confusion when managing members and users in the future.
+        * The check for null result from createSyncedUser is to ensure that we only attempt to save member data when a user was actually created or updated, if the result is null, it means the user creation or update was skipped due to an error or because the member was not active, in which case we should also skip saving the member data.
+       */
+      if ($result = $this->createSyncedUser($member)) {
+        $memberData = [
+          'name' => $member['name'],
+          'email' => $member['email'],
+          'phone' => $member['phoneNumber'] ?? null,
+          'birth_date' => $member['birthDate'] ?? null,
+          'address' => $member['address'] ?? null,
+          'city' => $member['city'] ?? null,
+          'postal_code' => $member['postalCode'] ?? null,
+          'identification' => $member['identification'] ?? null,
+          'membership' => $member['membership'] ?? null,
+          'unpaid_fee' => $member['unpaidFee'] ?? null,
+        ];
+
+        if ( get_option('wp_unioo_sync_custom_fields') ) {
+          foreach (get_option('wp_unioo_sync_custom_fields', []) as $label => $column) {
+              if (isset($member[$label])) {
+                  $memberData[$column] = $member[$label];
+              }
+          }
+        }
+
+        if ( null === $result ) {
+          return 'skipped';
+        }
+
+        /**
+         * If the custom table option is enabled, insert or update the member data into the custom table, otherwise save the member data as user meta for the created or updated user.
+          * This is to provide flexibility for different use cases, some may prefer to have the member data in a custom table for easier querying and management, while others may prefer to have it as user meta for simplicity and compatibility with existing WordPress user management features.
+          * The custom fields option allows users to map additional fields from the Unioo member data to either the custom table or user meta, providing further customization options for different use cases and requirements.
+         */
+        if ( get_option('wp_unioo_sync_members_table') ) {
+            $this->insertUpdateIntoTable($memberData, $result['user']->ID);
+        } else {
+          foreach( $memberData as $key => $value ) {
+            update_user_meta(
+              $result['user']->ID,
+              $key,
+              $value
+            );
+          }
+        }
+      } else {
+        return 'skipped';
+      }
+
+      return $result['isNew'] ? 'created' : 'updated';
+    }
+
+    /**
+     * the process of a batch of members
+     * @param array $members
+     * @return array
+     */
     public function processBatch(array $members): array
     {
       $results = [
@@ -114,6 +176,13 @@ if ( ! class_exists('MemberProcessor') ) {
       return $results;
     }
 
+    /**
+     * Creating the synced user
+     *
+     * @param array $member
+     * @throws UniooSyncUserNotCreatedException
+     * @return array{isNew: bool, user: bool|\WP_User|null}
+     */
     public function createSyncedUser(array $member): ?array
     {
       $user = get_user_by('email', $member['email']);
@@ -146,6 +215,13 @@ if ( ! class_exists('MemberProcessor') ) {
       ];
     }
 
+    /**
+     * Inserting or updating member data into the custom table
+     *
+     * @param array $member
+     * @param int $user_id
+     * @return void
+     */
     public function insertUpdateIntoTable(array $member, int $user_id): void
     {
       global $wpdb;

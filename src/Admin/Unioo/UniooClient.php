@@ -104,54 +104,6 @@ if ( ! class_exists('UniooClient') ) {
      */
     public function sync_members($variables = []): array {
       $endpoint = "https://api.unioo.io/graphql";
-      $custom_fields = '';
-      if ( get_option('wp_unioo_sync_custom_fields') ) {
-        $custom_fields .= '
-          customFieldValues {
-            customField {
-              id
-              name
-            }
-            value
-          }
-        ';
-      }
-
-      $query = '
-        query listOverviewMembers($first: Int, $after: String, $order: [ListOverviewMemberSortInput!], $where: ListOverviewMemberFilterInput, $subscriptionId: UUID) {
-          data: listOverviewMembers(
-            first: $first
-            after: $after
-            order: $order
-            where: $where
-            subscriptionId: $subscriptionId
-          ) {
-            totalCount
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            nodes {
-              id
-              identification
-              userId
-              type
-              name
-              birthDate
-              address
-              postalCode
-              city
-              callingCode
-              email
-              phoneNumber
-              memberSince
-              status
-              invitationDate
-              ' . $custom_fields . '
-            }
-          }
-        },';
-
       $response = wp_remote_post($endpoint, [
         'headers' => [
           'Authorization' => 'Bearer ' . $this->bearer_token,
@@ -207,7 +159,7 @@ if ( ! class_exists('UniooClient') ) {
           },
           ',
           'variables' => [
-            'first' => 11,
+            'first' => 10,
             'after' => $variables['after'] ?? null,
             'where' => $variables['where'] ?? null,
             'subscriptionId' => $variables['subscriptionId'] ?? null,
@@ -228,7 +180,8 @@ if ( ! class_exists('UniooClient') ) {
       if (isset($data['errors'])) {
           return [
             'success' => false,
-            'message' => __($data['errors'][0]['message'], WP_UNIOO_SYNC_TEXTDOMAIN),
+            // 'message' => __($data['errors'][0]['message'], WP_UNIOO_SYNC_TEXTDOMAIN),
+            'message' => __('Unioo API error: User is Unauthorized. Please check your API credentials.', WP_UNIOO_SYNC_TEXTDOMAIN),
           ];
       }
 
