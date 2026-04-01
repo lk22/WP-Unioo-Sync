@@ -25,7 +25,7 @@ if ( ! class_exists('UniooClient') ) {
     public function send_sync_request(string $action = 'sync_members', ?array $variables = []): array {
       return match($action) {
         'sync_members' => $this->sync_members($variables),
-        'default' => [
+        default => [
           'success' => false,
           'message' => __('Invalid sync action specified.', WP_UNIOO_SYNC_TEXTDOMAIN),
         ],
@@ -46,6 +46,7 @@ if ( ! class_exists('UniooClient') ) {
 
       if ( is_wp_error($response) ) {
         error_log('Failed to authenticate with Unioo API: ' . $response->get_error_message());
+        return null;
       }
 
       $body = wp_remote_retrieve_body($response);
@@ -53,12 +54,14 @@ if ( ! class_exists('UniooClient') ) {
 
       if ( ! isset($data["token"]) ) {
         error_log('Failed to authenticate with Unioo API: ' . ($data['message'] ?? 'Unknown error'));
+        return null;
       }
 
       $retrieved_token = sanitize_text_field($data['token']);
 
       if ( ! $retrieved_token ) {
         error_log('Failed to retrieve API token from Unioo API response.');
+        return null;
       }
 
       update_option('wp_unioo_sync_bearer_token', $retrieved_token);
@@ -103,7 +106,7 @@ if ( ! class_exists('UniooClient') ) {
      * @return array{data: mixed, success: bool|array{message: mixed, success: bool}|array{message: string, success: bool}}
      */
     public function sync_members($variables = []): array {
-      $endpoint = "https://api.unioo.io/graphql";
+      $endpoint = ! empty($this->api_url) ? $this->api_url : "https://api.unioo.io/graphql";
       $response = wp_remote_post($endpoint, [
         'headers' => [
           'Authorization' => 'Bearer ' . $this->bearer_token,

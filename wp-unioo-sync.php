@@ -48,16 +48,26 @@ add_action('admin_init', function() {
   if ( get_option('wp_unioo_sync_custom_fields', false)) {
     $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
     foreach ($custom_fields as $key => $field) {
-      $lowercase_field = strtolower($field);
-      $wpdb->query("ALTER TABLE " . $wpdb->prefix . "unioo_members ADD COLUMN IF NOT EXISTS $lowercase_field varchar(255) DEFAULT NULL AFTER postal_code");
+      $lowercase_field = preg_replace('/[^a-z0-9_]/', '', strtolower($field));
+      if ( empty($lowercase_field) ) {
+        continue;
+      }
+      // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- column name is validated to [a-z0-9_] only
+      $wpdb->query("ALTER TABLE " . $wpdb->prefix . "unioo_members ADD COLUMN IF NOT EXISTS `" . esc_sql($lowercase_field) . "` varchar(255) DEFAULT NULL AFTER postal_code");
     }
   }
 });
 
-if (isset($_REQUEST['sync_action']) && $_REQUEST['sync_action'] === 'sync_members_list') {
-  // Handle the AJAX request to sync members list
+add_action('wp_ajax_sync_members_list', function() {
+  if ( ! current_user_can('manage_options') ) {
+    wp_send_json_error(['message' => __('You do not have permission to perform this action.', WP_UNIOO_SYNC_TEXTDOMAIN)], 403);
+    return;
+  }
+
+  check_ajax_referer('wp_unioo_sync_nonce', 'nonce');
+
   $client = new UniooClient(get_option('wp_unioo_sync_graphql_url'), get_option('wp_unioo_sync_bearer_token'));
   $sync = new SyncMembersList($client);
   $response = $sync->execute();
   wp_send_json_success(['message' => 'Unioo sync completed', 'response' => $response]);
-}
+});
