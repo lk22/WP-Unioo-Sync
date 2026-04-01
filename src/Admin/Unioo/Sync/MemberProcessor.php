@@ -27,7 +27,7 @@ if ( ! class_exists('MemberProcessor') ) {
         return false;
       }
 
-      return $member['status'] === 'ACTIVE' ? true : false;
+      return $member['status'] === 'ACTIVE';
     }
 
     /**
@@ -105,52 +105,49 @@ if ( ! class_exists('MemberProcessor') ) {
        * Save the member data if the user is created or updated successfully, if the user creation or update is skipped, do not save the member data to prevent having member data without a corresponding user, which could lead to orphaned member records and potential confusion when managing members and users in the future.
         * The check for null result from createSyncedUser is to ensure that we only attempt to save member data when a user was actually created or updated, if the result is null, it means the user creation or update was skipped due to an error or because the member was not active, in which case we should also skip saving the member data.
        */
-      if ($result = $this->createSyncedUser($member)) {
-        $memberData = [
-          'name' => $member['name'],
-          'email' => $member['email'],
-          'phone' => $member['phoneNumber'] ?? null,
-          'birth_date' => $member['birthDate'] ?? null,
-          'address' => $member['address'] ?? null,
-          'city' => $member['city'] ?? null,
-          'postal_code' => $member['postalCode'] ?? null,
-          'identification' => $member['identification'] ?? null,
-          'membership' => $member['membership'] ?? null,
-          'unpaid_fee' => $member['unpaidFee'] ?? null,
-        ];
+      $result = $this->createSyncedUser($member);
+      if ( null === $result ) {
+        return 'skipped';
+      }
 
-        if ( get_option('wp_unioo_sync_custom_fields') ) {
-          foreach (get_option('wp_unioo_sync_custom_fields', []) as $label => $column) {
-            foreach ( $member['customFieldValues'] as $customFieldValue) {
-              if (strtolower($customFieldValue['customField']['name']) === strtolower($label)) {
-                $memberData[$column] = $customFieldValue['text'] ?? null;
-              }
+      $memberData = [
+        'name' => $member['name'],
+        'email' => $member['email'],
+        'phone' => $member['phoneNumber'] ?? null,
+        'birth_date' => $member['birthDate'] ?? null,
+        'address' => $member['address'] ?? null,
+        'city' => $member['city'] ?? null,
+        'postal_code' => $member['postalCode'] ?? null,
+        'identification' => $member['identification'] ?? null,
+        'membership' => $member['membership'] ?? null,
+        'unpaid_fee' => $member['unpaidFee'] ?? null,
+      ];
+
+      if ( get_option('wp_unioo_sync_custom_fields') ) {
+        foreach (get_option('wp_unioo_sync_custom_fields', []) as $label => $column) {
+          foreach ( $member['customFieldValues'] as $customFieldValue) {
+            if (strtolower($customFieldValue['customField']['name']) === strtolower($label)) {
+              $memberData[$column] = $customFieldValue['text'] ?? null;
             }
           }
         }
+      }
 
-        if ( null === $result ) {
-          return 'skipped';
-        }
-
-        /**
-         * If the custom table option is enabled, insert or update the member data into the custom table, otherwise save the member data as user meta for the created or updated user.
-          * This is to provide flexibility for different use cases, some may prefer to have the member data in a custom table for easier querying and management, while others may prefer to have it as user meta for simplicity and compatibility with existing WordPress user management features.
-          * The custom fields option allows users to map additional fields from the Unioo member data to either the custom table or user meta, providing further customization options for different use cases and requirements.
-         */
-        if ( get_option('wp_unioo_sync_members_table') ) {
-            $this->insertUpdateIntoTable($memberData, $result['user']->ID);
-        } else {
-          foreach( $memberData as $key => $value ) {
-            update_user_meta(
-              $result['user']->ID,
-              $key,
-              $value
-            );
-          }
-        }
+      /**
+       * If the custom table option is enabled, insert or update the member data into the custom table, otherwise save the member data as user meta for the created or updated user.
+       * This is to provide flexibility for different use cases, some may prefer to have the member data in a custom table for easier querying and management, while others may prefer to have it as user meta for simplicity and compatibility with existing WordPress user management features.
+       * The custom fields option allows users to map additional fields from the Unioo member data to either the custom table or user meta, providing further customization options for different use cases and requirements.
+       */
+      if ( get_option('wp_unioo_sync_members_table') ) {
+          $this->insertUpdateIntoTable($memberData, $result['user']->ID);
       } else {
-        return 'skipped';
+        foreach( $memberData as $key => $value ) {
+          update_user_meta(
+            $result['user']->ID,
+            $key,
+            $value
+          );
+        }
       }
 
       return $result['isNew'] ? 'created' : 'updated';
@@ -193,7 +190,10 @@ if ( ! class_exists('MemberProcessor') ) {
       if ( ! $user ) {
         try {
 
-          $username = $this->getUsernameField();
+          $username_field = $this->getUsernameField();
+          $username = ( ! empty($username_field) && isset($member[$username_field]) )
+            ? sanitize_user($member[$username_field])
+            : sanitize_user($member['email'] ?? '');
           $password = $this->getPasswordField();
 
           $user_id = wp_create_user(
@@ -205,6 +205,8 @@ if ( ! class_exists('MemberProcessor') ) {
           if ( is_wp_error($user_id) ) {
             throw new UniooSyncUserNotCreatedException($user_id->get_error_message());
           }
+
+          $isNew = true;
         } catch ( UniooSyncUserNotCreatedException $e ) {
           error_log('Error creating user for member ' . $member['email'] . ': ' . $e->getMessage());
           return null;

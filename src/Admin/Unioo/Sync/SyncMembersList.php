@@ -13,18 +13,17 @@ if ( ! class_exists('SyncMembersList') ) {
   class SyncMembersList {
     public function __construct(
       private UniooClient $unioo_client
-    ) {
-      $this->unioo_client = $unioo_client;
-    }
+    ) {}
 
     public function execute(): array {
       global $wpdb;
+      $table_name = WP_UNIOO_SYNC_TABLE_NAME;
 
       if (
         ! get_option('wp_unioo_sync_username') ||
         ! get_option('wp_unioo_sync_password')
       ) {
-        $wpdb->insert('wp_unioo_sync', [
+        $wpdb->insert($table_name, [
           'sync_status' => 'failure',
           'sync_time' => current_time('mysql'),
           'sync_message' => "Unioo API sync failed: Missing API credentials. Please provide both username and password in the plugin settings.",
@@ -40,11 +39,10 @@ if ( ! class_exists('SyncMembersList') ) {
         ];
       }
 
-      $client = new UniooClient(get_option('wp_unioo_sync_api_url'), get_option('wp_unioo_sync_bearer_token'));
-      $response = $client->send_sync_request('sync_members');
+      $response = $this->unioo_client->send_sync_request('sync_members');
       $processor = new MemberProcessor();
 
-      if ( ! false === $response['success']) {
+      if ( false !== $response['success'] ) {
         $results = $processor->processBatch($response["data"]["nodes"]);
       }
 
@@ -58,7 +56,7 @@ if ( ! class_exists('SyncMembersList') ) {
         str_contains($response["message"], 'Unauthorized')
         && get_option('wp_unioo_sync_auto_generate_token_on_unauthorization')
       ) {
-        $wpdb->insert('wp_unioo_sync', [
+        $wpdb->insert($table_name, [
           'sync_status' => 'failure',
           'sync_time' => current_time('mysql'),
           'sync_message' => "Unioo API sync failed: " . $response['message'] . " Attempting to re-authenticate and retry.",
@@ -68,15 +66,15 @@ if ( ! class_exists('SyncMembersList') ) {
           '%s',
         ]);
 
-        $client->authenticate();
-        $response = $client->sync_members();
+        $this->unioo_client->authenticate();
+        $response = $this->unioo_client->sync_members();
 
-        if ( ! false === $response['success']) {
+        if ( false !== $response['success'] ) {
           $results = $processor->processBatch($response["data"]["nodes"]);
         }
 
          if (false === $response['success']) {
-           $wpdb->insert('wp_unioo_sync', [
+           $wpdb->insert($table_name, [
              'sync_status' => 'failure',
              'sync_time' => current_time('mysql'),
              'sync_message' => "Unioo API sync failed after re-authentication: " . $response['message'],
@@ -90,7 +88,7 @@ if ( ! class_exists('SyncMembersList') ) {
       }
 
       $wpdb->insert(
-        "wp_unioo_sync",
+        $table_name,
         [
           'sync_status' => 'success',
           'sync_time' => current_time('mysql'),
@@ -118,27 +116,6 @@ if ( ! class_exists('SyncMembersList') ) {
         $cursor = $result['data']['pageInfo']['endCursor'] ?? null;
         $hasNextPage = $result['data']['pageInfo']['hasNextPage'] ?? false;
       } while ($hasNextPage && $cursor !== null);
-
-
-      $response = $this->unioo_client->send_sync_request('sync_members');
-
-      if ( false === $response['success'] ) {
-        return [];
-      }
-
-      $results = [
-        'created' => 0,
-        'updated' => 0,
-        'failed' => 0,
-      ];
-
-      foreach ($response["data"]["nodes"] as $member) {
-        $result = (new MemberProcessor())->process($member);
-        $status = $result['status'] ?? 'failed';
-        $results[$status]++;
-      }
-
-      return $results;
     }
 
     public function fetchPage(?string $cursor): ?array {

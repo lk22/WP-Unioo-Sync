@@ -62,7 +62,7 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
 
           $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
 
-          if ( is_array(json_encode($custom_fields)) && count($custom_fields) > 0 ) {
+          if ( is_array($custom_fields) && count($custom_fields) > 0 ) {
             $custom_fields = get_option('wp_unioo_sync_custom_fields');
             foreach ( $custom_fields as $key => $field ) {
               if ( isset($member[$field]) ) {
@@ -253,7 +253,7 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
       global $wpdb;
       try {
         $sync_log_creatd = $wpdb->insert(
-          "wp_unioo_sync",
+          WP_UNIOO_SYNC_TABLE_NAME,
           [
             'sync_status' => $status,
             'sync_time' => current_time('mysql'),

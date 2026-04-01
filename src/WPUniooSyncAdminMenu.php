@@ -341,7 +341,15 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
           <?php checked(1, $value, true); ?>
         />
         <p><?php esc_html_e('Store synced members in a custom database table instead of user meta. This is useful for large member lists or if you want to keep the data separate from WordPress users.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
-        <p><?php esc_html_e('Note: If enabled, the plugin will create following table ' . $wpdb->prefix . 'unioo_members in the WordPress database to store member data. Make sure to run the sync process after enabling this option to populate the table with member data.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+        <p>
+          <?php
+          printf(
+            /* translators: %s: database table name */
+            esc_html__('Note: If enabled, the plugin will create following table %s in the WordPress database to store member data. Make sure to run the sync process after enabling this option to populate the table with member data.', WP_UNIOO_SYNC_TEXTDOMAIN),
+            esc_html($wpdb->prefix . 'unioo_members')
+          );
+          ?>
+        </p>
       </label>
       <?php
     }
@@ -430,7 +438,7 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
       global $wpdb;
 
       $sync_logs = $wpdb->get_results(
-        "SELECT * FROM " . "wp_unioo_sync" .
+        "SELECT * FROM " . WP_UNIOO_SYNC_TABLE_NAME .
         " ORDER BY sync_time DESC",
         OBJECT
       );

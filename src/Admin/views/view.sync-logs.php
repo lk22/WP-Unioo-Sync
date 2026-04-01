@@ -2,23 +2,29 @@
 $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
 ?>
 <div class="wrap">
-  <h1><?php echo __('WP Unioo Sync', WP_UNIOO_SYNC_TEXTDOMAIN); ?></h1>
-  <p><?php echo __('Welcome_to the WP Unioo Sync plugin, use this page to manage your sync settings and view sync logs', WP_UNIOO_SYNC_TEXTDOMAIN)?></p>
-  <h2><?php echo __('Sync Logs', WP_UNIOO_SYNC_TEXTDOMAIN); ?></h2>
+  <h1><?php esc_html_e('WP Unioo Sync', WP_UNIOO_SYNC_TEXTDOMAIN); ?></h1>
+  <p><?php esc_html_e('Welcome to the WP Unioo Sync plugin, use this page to manage your sync settings and view sync logs', WP_UNIOO_SYNC_TEXTDOMAIN)?></p>
+  <h2><?php esc_html_e('Sync Logs', WP_UNIOO_SYNC_TEXTDOMAIN); ?></h2>
+  <button
+    id="sync-api-button"
+    class="button button-primary"
+  >
+    <?php esc_html_e('Sync Members from Unioo API', WP_UNIOO_SYNC_TEXTDOMAIN); ?>
+  </button>
   <button
     data-sync-action="sync_members_list"
-    class="button button-primary sync-button"
+    class="button button-secondary sync-button"
     sync-type="CSV"
   >
-    <?php echo __('Sync Members List', WP_UNIOO_SYNC_TEXTDOMAIN); ?>
+    <?php esc_html_e('Import Members from CSV', WP_UNIOO_SYNC_TEXTDOMAIN); ?>
   </button>
   <table class="wp-list-table widefat fixed striped">
     <thead>
       <tr>
-        <th><?php echo __('Log ID', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
-        <th><?php echo __('Message', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
-        <th><?php echo __('Time', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
-        <th><?php echo __('Status', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
+        <th><?php esc_html_e('Log ID', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
+        <th><?php esc_html_e('Message', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
+        <th><?php esc_html_e('Time', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
+        <th><?php esc_html_e('Status', WP_UNIOO_SYNC_TEXTDOMAIN); ?></th>
       </tr>
     </thead>
     <tbody>
@@ -38,24 +44,24 @@ $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
 
 <dialog id="sync-file-dialog">
   <div class="dialog-header">
-    <h1><?php echo __('Upload sync file', WP_UNIOO_SYNC_TEXTDOMAIN); ?></h1>
-    <p><?php echo __('Please select a file to upload for syncing.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
-    <small><?php echo __('Accepted file types: CSV, JSON', WP_UNIOO_SYNC_TEXTDOMAIN); ?></small>
+    <h1><?php esc_html_e('Upload sync file', WP_UNIOO_SYNC_TEXTDOMAIN); ?></h1>
+    <p><?php esc_html_e('Please select a file to upload for syncing.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+    <small><?php esc_html_e('Accepted file types: CSV, JSON', WP_UNIOO_SYNC_TEXTDOMAIN); ?></small>
   </div>
   <div class="dialog-body">
     <form id="sync-file-form" method="post" enctype="multipart/form-data">
-      <label for="sync-file-input"><?php echo __('Upload', WP_UNIOO_SYNC_TEXTDOMAIN); ?></label>
+      <label for="sync-file-input"><?php esc_html_e('Upload', WP_UNIOO_SYNC_TEXTDOMAIN); ?></label>
       <input type="file" name="sync_file" id="sync-file-input" accept=".csv, .json" />
     </form>
-    <h2><?php echo __('Sync Instructions', WP_UNIOO_SYNC_TEXTDOMAIN); ?></h2>
-    <p><?php echo __('To sync your members list, please upload a CSV file with the following columns: Navn, Email, Telefon, Fødselsdato, Adresse, By, Postnummer, Identifikation, Kontingenter (Navne), Ubetalte regninger, Indmeldelsesdato, Udmeldelsesdato, Aktiv betalingsmetode, Nyeste note, Gamertag, Kommune, Køn.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
-    <p><?php echo __('Make sure the file is properly formatted and contains all required fields for a successful sync.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+    <h2><?php esc_html_e('Sync Instructions', WP_UNIOO_SYNC_TEXTDOMAIN); ?></h2>
+    <p><?php esc_html_e('To sync your members list, please upload a CSV file with the following columns: Navn, Email, Telefon, Fødselsdato, Adresse, By, Postnummer, Identifikation, Kontingenter (Navne), Ubetalte regninger, Indmeldelsesdato, Udmeldelsesdato, Aktiv betalingsmetode, Nyeste note, Gamertag, Kommune, Køn.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+    <p><?php esc_html_e('Make sure the file is properly formatted and contains all required fields for a successful sync.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
     <p class="lines-found"></p>
     <div id="output" style="white-space: pre-wrap; background: #f0f0f0; padding: 10px; border: 1px solid #ccc;"></div>
   </div>
   <div class="dialog-footer">
-    <button id="sync-confirm-button" class="button button-primary"><?php echo __('Sync members', WP_UNIOO_SYNC_TEXTDOMAIN); ?></button>
-    <button id="sync-cancel-button" class="button"><?php echo __('Cancel', WP_UNIOO_SYNC_TEXTDOMAIN); ?></button>
+    <button id="sync-confirm-button" class="button button-primary"><?php esc_html_e('Sync members', WP_UNIOO_SYNC_TEXTDOMAIN); ?></button>
+    <button id="sync-cancel-button" class="button"><?php esc_html_e('Cancel', WP_UNIOO_SYNC_TEXTDOMAIN); ?></button>
   </div>
 </dialog>
 
@@ -133,7 +139,7 @@ $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
   const headers = [
     'Navn', 'Email', 'Telefon', 'Fødselsdato', 'Adresse', 'By', 'Postnummer', 'Identifikation', 'Kontingenter (Navne)', 'Ubetalte regninger', 'Indmeldelsesdato', 'Udmeldelsesdato', 'Aktiv betalingsmetode', 'Nyeste note'
   ]
-  headers.push(...Object.keys(<?php echo json_encode($custom_fields); ?>));
+  headers.push(...Object.keys(<?php echo wp_json_encode($custom_fields); ?>));
 
   syncFileInput.addEventListener('change', function(event) {
     let foundLines = 0;
@@ -222,5 +228,32 @@ $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
     });
   }
 
-  const bearerToken = <?php echo json_encode(get_option('wp_unioo_sync_bearer_token')); ?>;
+  const syncMembersNonce = <?php echo wp_json_encode(wp_create_nonce('wp_unioo_sync_nonce')); ?>;
+  const ajaxUrl = <?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>;
+
+  document.getElementById('sync-api-button').addEventListener('click', function() {
+    this.disabled = true;
+    fetch(ajaxUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        action: 'sync_members_list',
+        nonce: syncMembersNonce,
+      })
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Sync completed successfully!');
+        } else {
+          alert('Sync failed: ' + (data.data && data.data.message ? data.data.message : 'Unknown error'));
+        }
+        location.reload();
+      })
+      .catch(() => {
+        alert('Sync request failed. Please try again.');
+        this.disabled = false;
+      });
+  });
 </script>
