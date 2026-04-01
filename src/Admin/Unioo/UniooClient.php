@@ -125,10 +125,6 @@ if ( ! class_exists('UniooClient') ) {
                 endCursor
               }
               nodes {
-                id
-                identification
-                userId
-                type
                 name
                 birthDate
                 address
