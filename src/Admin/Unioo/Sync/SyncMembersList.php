@@ -11,6 +11,7 @@ use LeoKnudsen\WpUniooSync\Admin\Unioo\Sync\MemberProcessor;
 
 if ( ! class_exists('SyncMembersList') ) {
   class SyncMembersList {
+
     public function __construct(
       private UniooClient $unioo_client
     ) {}
@@ -39,52 +40,18 @@ if ( ! class_exists('SyncMembersList') ) {
         ];
       }
 
-      $response = $this->unioo_client->send_sync_request('sync_members');
       $processor = new MemberProcessor();
+      $results = [
+        "created" => 0,
+        "updated" => 0,
+        "failed" => 0,
+        "skipped" => 0,
+        "deleted" => 0,
+      ];
 
-      if ( false !== $response['success'] ) {
-        $results = $processor->processBatch($response["data"]["nodes"]);
-      }
-
-      /**
-       * if the sync request failed due to unauthorized error, attempt to authenticate and retry the synchronization request.
-       * This handles the case where the bearer token has expired or is invalid
-       */
-      if (
-        false === $response['success'] &&
-        isset($response["message"]) &&
-        str_contains($response["message"], 'Unauthorized')
-        && get_option('wp_unioo_sync_auto_generate_token_on_unauthorization')
-      ) {
-        $wpdb->insert($table_name, [
-          'sync_status' => 'failure',
-          'sync_time' => current_time('mysql'),
-          'sync_message' => "Unioo API sync failed: " . $response['message'] . " Attempting to re-authenticate and retry.",
-        ], [
-          '%s',
-          '%s',
-          '%s',
-        ]);
-
-        $this->unioo_client->authenticate();
-        $response = $this->unioo_client->sync_members();
-
-        if ( false !== $response['success'] ) {
-          $results = $processor->processBatch($response["data"]["nodes"]);
-        }
-
-         if (false === $response['success']) {
-           $wpdb->insert($table_name, [
-             'sync_status' => 'failure',
-             'sync_time' => current_time('mysql'),
-             'sync_message' => "Unioo API sync failed after re-authentication: " . $response['message'],
-           ], [
-             '%s',
-             '%s',
-             '%s',
-           ]);
-           return $response;
-         }
+      foreach ( $this->fetchAllMembers() as $member ) {
+        $status = $processor->process($member);
+        $results[$status]++;
       }
 
       $wpdb->insert(
@@ -92,7 +59,13 @@ if ( ! class_exists('SyncMembersList') ) {
         [
           'sync_status' => 'success',
           'sync_time' => current_time('mysql'),
-          'sync_message' => "Unioo API sync: " . $response['message'],
+          'sync_message' => sprintf(
+            __('Unioo API sync completed: %d created, %d updated, %d failed, %d skipped.', WP_UNIOO_SYNC_TEXTDOMAIN),
+            $results['created'],
+            $results['updated'],
+            $results['failed'],
+            $results['skipped']
+          ),
         ],
         [
           '%s',
@@ -101,7 +74,16 @@ if ( ! class_exists('SyncMembersList') ) {
         ]
       );
 
-      return $response;
+      return [
+        'success' => true,
+        "message" => sprintf(
+          __('Unioo API sync completed: %d created, %d updated, %d failed, %d skipped.', WP_UNIOO_SYNC_TEXTDOMAIN),
+          $results['created'],
+          $results['updated'],
+          $results['failed'],
+          $results['skipped']
+        ),
+      ];
     }
 
     public function fetchAllMembers(): \Generator {
@@ -119,12 +101,26 @@ if ( ! class_exists('SyncMembersList') ) {
     }
 
     public function fetchPage(?string $cursor): ?array {
+      global $wpdb;
       $variables = [
         'first' => 10,
         'after' => $cursor,
       ];
 
       $response = $this->unioo_client->send_sync_request('sync_members', $variables);
+
+      if (
+        false === $response['success'] &&
+        isset($response['message']) &&
+        str_contains($response['message'], 'Unauthorized') &&
+        get_option('wp_unioo_sync_auto_generate_token_on_unauthorization')
+      ) {
+        // Re-authenticate and retry with fresh token
+        $this->unioo_client->authenticate();
+
+        // Retry the request after re-authentication with the same variables
+        $response = $this->unioo_client->send_sync_request('sync_members', $variables);
+      }
 
       if ( false === $response['success'] ) {
         return null;

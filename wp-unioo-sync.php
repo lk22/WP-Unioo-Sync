@@ -58,13 +58,27 @@ add_action('admin_init', function() {
   }
 });
 
+/**
+ * This is for testing purposes only, to trigger the synchronization process without using the REST API endpoint. This allows for easier debugging and development of the synchronization logic without needing to set up external requests.
+ */
+if (isset($_REQUEST['sync_action']) && $_REQUEST["sync_action"] === 'sync_members_list') {
+    $client = new UniooClient(get_option('wp_unioo_sync_graphql_url'), get_option('wp_unioo_sync_bearer_token'));
+    $sync = new SyncMembersList($client);
+    $response = $sync->execute();
+    wp_send_json_success(['message' => 'Unioo sync completed', 'response' => $response]);
+}
+
 add_action('wp_ajax_sync_members_list', function() {
   if ( ! current_user_can('manage_options') ) {
     wp_send_json_error(['message' => __('You do not have permission to perform this action.', WP_UNIOO_SYNC_TEXTDOMAIN)], 403);
     return;
   }
 
-  check_ajax_referer('wp_unioo_sync_nonce', 'nonce');
+  $checked_referer = check_ajax_referer('wp_unioo_sync_nonce', 'nonce');
+  if ( ! $checked_referer ) {
+    wp_send_json_error(['message' => __('Invalid nonce. Please refresh the page and try again.', WP_UNIOO_SYNC_TEXTDOMAIN)], 400);
+    return;
+  }
 
   $client = new UniooClient(get_option('wp_unioo_sync_graphql_url'), get_option('wp_unioo_sync_bearer_token'));
   $sync = new SyncMembersList($client);
