@@ -121,9 +121,11 @@ if ( ! class_exists('MemberProcessor') ) {
 
         if ( get_option('wp_unioo_sync_custom_fields') ) {
           foreach (get_option('wp_unioo_sync_custom_fields', []) as $label => $column) {
-              if (isset($member[$label])) {
-                  $memberData[$column] = $member[$label];
+            foreach ( $member['customFieldValues'] as $customFieldValue) {
+              if (strtolower($customFieldValue['customField']['name']) === strtolower($label)) {
+                $memberData[$column] = $customFieldValue['text'] ?? null;
               }
+            }
           }
         }
 
@@ -228,19 +230,26 @@ if ( ! class_exists('MemberProcessor') ) {
       $table_name = $wpdb->prefix . 'unioo_members';
 
       $data = [
-        'member_id' => $member['identification'],
+        'member_id' => $member['identification'] ?? null,
         'user_id' => $user_id,
-        'name' => $member['name'],
-        'email' => $member['email'],
+        'name' => $member['name'] ?? null,
+        'email' => $member['email'] ?? null,
         'phone' => $member['phoneNumber'] ?? null,
-        'sync_time' => current_time('mysql'),
+        'birth_date' => $member['birthDate'] ?? null,
+        'address' => $member['address'] ?? null,
+        'city' => $member['city'] ?? null,
+        'postal_code' => $member['postalCode'] ?? null,
+        'member_since' => $member['memberSince'] ?? null,
+        'unpaid_fee' => $member['hasUnpaidInvoices'] ?? null,
       ];
 
       // only apply custom fields if the option is enabled and there are custom fields defined
-      if ( get_option('wp_unioo_sync_custom_fields') ) {
+      if ( get_option('wp_unioo_sync_custom_fields') && !empty($member["customFieldValues"]) ) {
         foreach (get_option('wp_unioo_sync_custom_fields', []) as $label => $column) {
-            if (isset($member[$label])) {
-                $data[$column] = $member[$label];
+            foreach ( $member['customFieldValues'] as $customFieldValue) {
+              if (strtolower($customFieldValue['customField']['name']) === strtolower($label)) {
+                $data[$column] = $customFieldValue['text'] ?? null;
+              }
             }
         }
       }
