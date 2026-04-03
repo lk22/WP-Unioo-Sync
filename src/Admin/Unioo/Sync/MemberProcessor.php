@@ -53,7 +53,7 @@ if ( ! class_exists('MemberProcessor') ) {
         return str_replace(
           ['{{','}}'],
           '',
-          get_option('wp_unioo_sync_user_default_username_field')
+          strtolower(get_option('wp_unioo_sync_user_default_username_field'))
         );
       }
 
@@ -72,11 +72,11 @@ if ( ! class_exists('MemberProcessor') ) {
         return str_replace(
           ['{{','}}'],
           '',
-          get_option('wp_unioo_sync_user_default_password_field')
+          strtolower(get_option('wp_unioo_sync_user_default_password_field'))
         );
       }
 
-      return wp_generate_password();
+      return 'generate_password';
     }
 
     /**
@@ -84,7 +84,7 @@ if ( ! class_exists('MemberProcessor') ) {
      * @param array $member
      * @return string
      */
-    public function process(array $member): string
+    public function process(array $member)
     {
       $isActive = $this->isActiveMember($member);
       $existingUser = get_user_by('email', $member['email']);
@@ -189,12 +189,28 @@ if ( ! class_exists('MemberProcessor') ) {
 
       if ( ! $user ) {
         try {
-
           $username_field = $this->getUsernameField();
-          $username = ( ! empty($username_field) && isset($member[$username_field]) )
-            ? sanitize_user($member[$username_field])
-            : sanitize_user($member['email'] ?? '');
-          $password = $this->getPasswordField();
+          $passwordField = $this->getPasswordField();
+
+          // loop through custom fields to find the username field value if the username field is a custom field
+          // otherwise assume the username field is a member field and try to get the value from the member data refer default field mapping to email
+          $username = $member["email"];
+
+          if ( ! empty($username_field) && isset($member["customFieldValues"]) ) {
+            foreach ( $member["customFieldValues"] as $cfkey => $customFieldValue) {
+              if (strtolower($member["customFieldValues"][$cfkey]['customField']['name']) === strtolower($username_field)) {
+                $username = sanitize_user($member["customFieldValues"][$cfkey]['text'] ?? $member["email"]);
+              }
+            }
+          }
+
+          if ( ! empty($passwordField) && isset($member["customFieldValues"]) ) {
+            foreach ( $member["customFieldValues"] as $cfkey => $customFieldValue) {
+              if (strtolower($member["customFieldValues"][$cfkey]['customField']['name']) === strtolower($passwordField)) {
+                $password = $member["customFieldValues"][$cfkey]['text'] ?? wp_generate_password();
+              }
+            }
+          }
 
           $user_id = wp_create_user(
             $username,
@@ -248,11 +264,11 @@ if ( ! class_exists('MemberProcessor') ) {
       // only apply custom fields if the option is enabled and there are custom fields defined
       if ( get_option('wp_unioo_sync_custom_fields') && !empty($member["customFieldValues"]) ) {
         foreach (get_option('wp_unioo_sync_custom_fields', []) as $label => $column) {
-            foreach ( $member['customFieldValues'] as $customFieldValue) {
-              if (strtolower($customFieldValue['customField']['name']) === strtolower($label)) {
-                $data[$column] = $customFieldValue['text'] ?? null;
-              }
+          foreach ( $member['customFieldValues'] as $customFieldValue) {
+            if (strtolower($customFieldValue['customField']['name']) === strtolower($label)) {
+              $data[$column] = $customFieldValue['text'] ?? null;
             }
+          }
         }
       }
 

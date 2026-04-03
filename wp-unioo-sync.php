@@ -24,6 +24,7 @@ define('WP_UNIOO_SYNC_TABLE_NAME', $wpdb->prefix . 'wp_unioo_sync');
 
 require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
 require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+require_once WP_UNIOO_SYNC_PLUGIN_DIR . 'functions.php';
 
 use LeoKnudsen\WpUniooSync\WPUniooSyncActivator;
 use LeoKnudsen\WpUniooSync\WPUniooSyncDeactivator;
@@ -47,14 +48,7 @@ add_action('admin_init', function() {
   global $wpdb;
   if ( get_option('wp_unioo_sync_custom_fields', false)) {
     $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
-    foreach ($custom_fields as $key => $field) {
-      $lowercase_field = preg_replace('/[^a-z0-9_]/', '', strtolower($field));
-      if ( empty($lowercase_field) ) {
-        continue;
-      }
-      // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- column name is validated to [a-z0-9_] only
-      $wpdb->query("ALTER TABLE " . $wpdb->prefix . "unioo_members ADD COLUMN IF NOT EXISTS `" . esc_sql($lowercase_field) . "` varchar(255) DEFAULT NULL AFTER postal_code");
-    }
+    insert_custom_field_table_columns($custom_fields);
   }
 });
 
@@ -76,6 +70,7 @@ add_action('wp_ajax_sync_members_list', function() {
 
   $checked_referer = check_ajax_referer('wp_unioo_sync_nonce', 'nonce');
   if ( ! $checked_referer ) {
+    send_to_sync_log('Unioo API sync failed: Invalid nonce. Possible CSRF attack.', 'failure');
     wp_send_json_error(['message' => __('Invalid nonce. Please refresh the page and try again.', WP_UNIOO_SYNC_TEXTDOMAIN)], 400);
     return;
   }
@@ -83,5 +78,6 @@ add_action('wp_ajax_sync_members_list', function() {
   $client = new UniooClient(get_option('wp_unioo_sync_graphql_url'), get_option('wp_unioo_sync_bearer_token'));
   $sync = new SyncMembersList($client);
   $response = $sync->execute();
+  send_to_sync_log('Unioo API sync completed successfully.', 'success');
   wp_send_json_success(['message' => 'Unioo sync completed', 'response' => $response]);
 });
