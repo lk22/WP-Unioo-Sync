@@ -1,0 +1,32 @@
+name: Security check
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  security-check:
+    name: Run security checks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.4']
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: composer:2.0 security-checker:1.0
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist
+      - name: Run security checks
+        run: composer security-checker --format=github
