@@ -48,7 +48,6 @@ it('Checks if the REST API route is registered', function() {
   do_action('rest_api_init');
 
   $routes = $restAPI::get_routes();
-  var_dump($routes);
 
   expect($routes)->toHaveKey('/wp-unioo-sync/v1/sync-members');
 });
