@@ -28,7 +28,7 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
     }
 
     public function register_routes() {
-      register_rest_route(self::$namespace, '/sync-members', [
+      register_rest_route(self::$namespace, '/members/sync-members', [
         'methods' => 'POST',
         'callback' => [$this, 'sync_csv_members'],
         'permission_callback' => function() {

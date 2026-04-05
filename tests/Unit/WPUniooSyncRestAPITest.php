@@ -29,7 +29,7 @@ it('Checks if the REST API route is registered', function() {
 
   when('register_rest_route')->alias(function($namespace, $route, $args) {
     // We only want to check for the '/wp-unioo-sync/v1/sync-members' route, so we can ignore other routes
-    if ($namespace === 'wp-unioo-sync/v1' && $route === '/sync-members') {
+    if ($namespace === 'wp-unioo-sync/v1' && $route === '/members/sync-members') {
       // We can return true to indicate that the route was registered successfully
       return true;
     }
@@ -39,7 +39,7 @@ it('Checks if the REST API route is registered', function() {
     // We can return a mock of the WP_REST_Server class that has the get_routes method
     $mock = \Mockery::mock('WP_REST_Server');
     $mock->shouldReceive('get_routes')->andReturn([
-      '/wp-unioo-sync/v1/sync-members' => []
+      '/wp-unioo-sync/v1/members/sync-members' => []
     ]);
     return $mock;
   });
@@ -49,5 +49,5 @@ it('Checks if the REST API route is registered', function() {
 
   $routes = $restAPI::get_routes();
 
-  expect($routes)->toHaveKey('/wp-unioo-sync/v1/sync-members');
+  expect($routes)->toHaveKey('/wp-unioo-sync/v1/members/sync-members');
 });

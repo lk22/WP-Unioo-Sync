@@ -199,7 +199,7 @@ $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
   syncConfirmButton.addEventListener('click', function(){
     // get form data
     console.log('Syncing members list with Unioo...', foundMembers);
-    fetch('<?php echo esc_url(rest_url('wp-unioo-sync/v1/members/import-csv')); ?>', {
+    fetch('<?php echo esc_url(rest_url('wp-unioo-sync/v1/members/sync-members')); ?>', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
