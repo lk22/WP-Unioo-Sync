@@ -1,0 +1,29 @@
+name: Linting
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  phpcs:
+    name: Run PHP CodeSniffer
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.2', '8.0', '7.4']
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: phpcs:3.0
+      - name: Run PHP CodeSniffer
+        run: phpcs --standard=PSR12 src/ tests/ --ignore=vendor/ --extensions=php

@@ -14,16 +14,31 @@ if ( ! defined('ABSPATH') ) {
 
 if ( ! class_exists('WPUniooSyncRestAPI') ) {
   class WPUniooSyncRestAPI {
+
+    public static $namespace = 'wp-unioo-sync/v1';
+
     public function __construct() {
       add_action('rest_api_init', function() {
-        register_rest_route('wp-unioo-sync/v1', '/members/import-csv', [
-          'methods' => WP_REST_Server::CREATABLE,
-          'callback' => [$this, 'sync_csv_members'],
-          'permission_callback' => function() {
-            return current_user_can('manage_options');
-          }
-        ]);
+        $this->register_routes();
       });
+    }
+
+    public static function get_namespace() {
+      return self::$namespace;
+    }
+
+    public function register_routes() {
+      register_rest_route(self::$namespace, '/sync-members', [
+        'methods' => 'POST',
+        'callback' => [$this, 'sync_csv_members'],
+        'permission_callback' => function() {
+          return current_user_can('manage_options');
+        }
+      ]);
+    }
+
+    public static function get_routes() {
+      return rest_get_server()->get_routes();
     }
 
     public function sync_csv_members(WP_REST_Request $request) {
