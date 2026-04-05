@@ -28,6 +28,6 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-dev --prefer-dist
       - name: Install PHP CodeSniffer WordPress Coding Standards
-        run: composer require --dev dealerdirect/phpcodesniffer-composer-installer
+        run: composer require dealerdirect/phpcodesniffer-composer-installer:*
       - name: Run PHP CodeSniffer
         run: phpcs --standard=PSR12 src/ tests/ --ignore=vendor/ --extensions=php
