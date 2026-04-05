@@ -26,6 +26,6 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: phpcs:3.0
       - name: Install PHP CodeSniffer WordPress Coding Standards
-        run: composer install --dev dealerdirect/phpcodesniffer-composer-installer
+        run: composer require --dev dealerdirect/phpcodesniffer-composer-installer
       - name: Run PHP CodeSniffer
         run: phpcs --standard=PSR12 src/ tests/ --ignore=vendor/ --extensions=php
