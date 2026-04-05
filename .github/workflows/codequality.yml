@@ -29,4 +29,4 @@ jobs:
         run: composer require --dev phpstan/phpstan szepeviktor/phpstan-wordpress
 
       - name: Run quality checks
-        run: vendor/bin/phpstan analyse -l max src --error-format=github
+        run: vendor/bin/phpstan  --error-format=github
