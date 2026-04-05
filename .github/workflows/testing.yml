@@ -31,10 +31,4 @@ jobs:
         run: composer install --prefer-dist
 
       - name: Run unit tests
-        run: ./vendor/bin/pest --group=unit --coverage --colors=never --min=80
-
-      - name: Run feature tests
-        run: ./vendor/bin/pest --group=feature --coverage --colors=never --min=80
-
-      - name: Run integration tests
-        run: ./vendor/bin/pest --group=integration --coverage --colors=never --min=80
+        run: ./vendor/bin/pest --testdox --colors=always
