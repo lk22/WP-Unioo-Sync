@@ -57,47 +57,46 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
         // make sure if there is a user in the system with the same email as the member, if not create a new user and assign a role, for example: subscriber
         // then save the member data in the user meta, for example: email, gamertag, and other relevant information from the data
         // return rest_ensure_response($this->createSynceUnioodUser($member));
-        if ( $user = $this->createSynceUnioodUser($member) ) {
-          $memberData = [
-            'name' => $member['Navn'],
-            'email' => $member['Email'],
-            'phone' => $member['Telefon'],
-            'birth_date' => $member['Fødselsdato'],
-            'address' => $member['Adresse'],
-            'city' => $member['By'],
-            'postal_code' => $member['Postnummer'],
-            'identification' => $member['Identifikation'],
-            'membership' => $member['Kontingenter (Navne)'],
-            'unpaid_fee' => $member['Ubetalte regninger'],
-            'member_since' => $member['Indmeldelsesdato'],
-            'left_at' => $member['Udmeldelsesdato'],
-            'active_payment_method' => $member['Aktiv betalingsmetode'],
-            'latest_note' => $member['Nyeste note'],
-          ];
+        $user = $this->createSynceUnioodUser($member);
+        $memberData = [
+          'name' => $member['Navn'],
+          'email' => $member['Email'],
+          'phone' => $member['Telefon'],
+          'birth_date' => $member['Fødselsdato'],
+          'address' => $member['Adresse'],
+          'city' => $member['By'],
+          'postal_code' => $member['Postnummer'],
+          'identification' => $member['Identifikation'],
+          'membership' => $member['Kontingenter (Navne)'],
+          'unpaid_fee' => $member['Ubetalte regninger'],
+          'member_since' => $member['Indmeldelsesdato'],
+          'left_at' => $member['Udmeldelsesdato'],
+          'active_payment_method' => $member['Aktiv betalingsmetode'],
+          'latest_note' => $member['Nyeste note'],
+        ];
 
-          $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
+        $custom_fields = get_option('wp_unioo_sync_custom_fields', []);
 
-          if ( is_array($custom_fields) && count($custom_fields) > 0 ) {
-            $custom_fields = get_option('wp_unioo_sync_custom_fields');
-            foreach ( $custom_fields as $key => $field ) {
-              if ( isset($member[$field]) ) {
-                $lowercase_field = strtolower($field);
-                $memberData[$lowercase_field] = $member[$field];
-                $member[$lowercase_field] = $member[$field];
-              }
+        if ( is_array($custom_fields) && count($custom_fields) > 0 ) {
+          $custom_fields = get_option('wp_unioo_sync_custom_fields');
+          foreach ( $custom_fields as $key => $field ) {
+            if ( isset($member[$field]) ) {
+              $lowercase_field = strtolower($field);
+              $memberData[$lowercase_field] = $member[$field];
+              $member[$lowercase_field] = $member[$field];
             }
           }
-
-          if ( ! get_option('wp_unioo_sync_members_table') ) {
-            foreach ( $memberData as $key => $value ) {
-              update_user_meta($user->ID, $key, $value);
-            }
-          } else {
-            $this->insertUpdateIntoTable($member, $user->ID);
-          }
-
-          $createdUsers++;
         }
+
+        if ( ! get_option('wp_unioo_sync_members_table') ) {
+          foreach ( $memberData as $key => $value ) {
+            update_user_meta($user->ID, $key, $value);
+          }
+        } else {
+          $this->insertUpdateIntoTable($member, $user->ID);
+        }
+
+        $createdUsers++;
       }
 
       // Process the CSV file and sync members with Unioo
@@ -109,7 +108,7 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
 
       // Log the sync status in the database
       $this->logSyncStatus(
-        $sync_result['success'] ? 'success' : 'failure',
+        'success',
         $sync_result['message']
       );
 
@@ -121,9 +120,9 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
      *
      * @param mixed $member
      * @throws UniooSyncUserNotCreatedException
-     * @return bool|WP_User|null
+     * @return array|WP_User
      */
-    private function createSynceUnioodUser($member): array|WP_User|null {
+    private function createSynceUnioodUser($member): array|WP_User {
       $user = get_user_by('email', $member['Email']);
 
       if ( ! $user ) {

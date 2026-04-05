@@ -42,7 +42,7 @@ if ( ! class_exists('MemberProcessor') ) {
     /**
      * fetching username field for member user creation
      *
-     * @return array|string
+     * @return string
      */
     public function getUsernameField(): string
     {
@@ -61,7 +61,7 @@ if ( ! class_exists('MemberProcessor') ) {
      * Getting password field for use as default password field value
      * default is randome generated password by WordPress
      *
-     * @return array|string
+     * @return string
      */
     public function getPasswordField(): string
     {
@@ -81,7 +81,7 @@ if ( ! class_exists('MemberProcessor') ) {
      * @param array $member
      * @return string
      */
-    public function process(array $member)
+    public function process(array $member): string
     {
       $isActive = $this->isActiveMember($member);
       $existingUser = get_user_by('email', $member['email']);

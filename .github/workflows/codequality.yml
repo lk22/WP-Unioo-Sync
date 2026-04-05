@@ -1,0 +1,32 @@
+name: Code Quality check
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  code-quality:
+    name: Code Quality check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: phpcs:3.0
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist
+
+      - name: Install PHPStan
+        run: composer require --dev phpstan/phpstan szepeviktor/phpstan-wordpress
+
+      - name: Run quality checks
+        run: vendor/bin/phpstan analyse -l max src --error-format=github

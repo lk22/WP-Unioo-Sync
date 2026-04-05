@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<ruleset name="WP Unioo Sync">
+    <file>src/</file>
+    <arg name="extensions" value="php"/>
+    <rule ref="WordPress"/>
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array" value="wp-unioo-sync"/>
+        </properties>
+    </rule>
+</ruleset>

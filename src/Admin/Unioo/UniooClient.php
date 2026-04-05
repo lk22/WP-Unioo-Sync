@@ -170,6 +170,7 @@ if ( ! class_exists('UniooClient') ) {
         return [
           'success' => false,
           'message' => $response->get_error_message(),
+          'data' => null,
         ];
       }
 
@@ -181,6 +182,7 @@ if ( ! class_exists('UniooClient') ) {
             'success' => false,
             // 'message' => __($data['errors'][0]['message'], WP_UNIOO_SYNC_TEXTDOMAIN),
             'message' => __('Unioo API error: User is Unauthorized. Please check your API credentials.', WP_UNIOO_SYNC_TEXTDOMAIN),
+            'data' => $data['errors'],
           ];
       }
 

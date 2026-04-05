@@ -1,0 +1,15 @@
+parameters:
+    level: 5
+    paths:
+        - src/
+    bootstrapFiles:
+        - tests/bootstrap.php
+    scanFiles:
+        - wp-unioo-sync.php
+    tips:
+      discoveringSymbols: false
+    parallel:
+        maximumNumberOfProcesses: 1
+
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon

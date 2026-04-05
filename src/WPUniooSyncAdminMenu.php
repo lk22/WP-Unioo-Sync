@@ -443,11 +443,19 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         OBJECT
       );
 
-      require_once WP_UNIOO_SYNC_PLUGIN_DIR . 'src/Admin/views/view.sync-logs.php';
+      if( defined('WP_UNIOO_SYNC_PLUGIN_DIR')) {
+        require_once WP_UNIOO_SYNC_PLUGIN_DIR . 'src/Admin/views/view.sync-logs.php';
+      } else {
+        require_once plugin_dir_path(__FILE__) . 'views/view.sync-logs.php';
+      }
     }
 
     public function admin_settings_page() {
-      require_once WP_UNIOO_SYNC_PLUGIN_DIR . 'src/Admin/views/view.sync-settings.php';
+      if (defined('WP_UNIOO_SYNC_PLUGIN_DIR')) {
+        require_once WP_UNIOO_SYNC_PLUGIN_DIR . 'src/Admin/views/view.sync-settings.php';
+      } else {
+        require_once plugin_dir_path(__FILE__) . 'views/view.sync-settings.php';
+      }
     }
   }
 }
