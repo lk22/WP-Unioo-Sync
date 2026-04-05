@@ -8,9 +8,6 @@ if ( ! defined('ABSPATH') ) {
 
 use LeoKnudsen\WpUniooSync\Exceptions\UniooSyncUserNotCreatedException;
 
-require_once ABSPATH . 'wp-admin/includes/user.php';
-require_once ABSPATH . 'wp-includes/pluggable.php';
-
 if ( ! class_exists('MemberProcessor') ) {
   class MemberProcessor
   {
@@ -39,7 +36,7 @@ if ( ! class_exists('MemberProcessor') ) {
      */
     public function isMemberExpired($member): bool
     {
-      return false;
+      return $member['paymentMethod']['isExpired'] ?? false;
     }
 
     /**
@@ -106,9 +103,6 @@ if ( ! class_exists('MemberProcessor') ) {
         * The check for null result from createSyncedUser is to ensure that we only attempt to save member data when a user was actually created or updated, if the result is null, it means the user creation or update was skipped due to an error or because the member was not active, in which case we should also skip saving the member data.
        */
       $result = $this->createSyncedUser($member);
-      if ( null === $result ) {
-        return 'skipped';
-      }
 
       $memberData = [
         'name' => $member['name'],
@@ -182,51 +176,47 @@ if ( ! class_exists('MemberProcessor') ) {
      * @throws UniooSyncUserNotCreatedException
      * @return array{isNew: bool, user: bool|\WP_User|null}
      */
-    public function createSyncedUser(array $member): ?array
+    public function createSyncedUser(array $member): array
     {
       $user = get_user_by('email', $member['email']);
       $isNew = false;
 
       if ( ! $user ) {
-        try {
-          $username_field = $this->getUsernameField();
-          $passwordField = $this->getPasswordField();
+        $username_field = $this->getUsernameField();
+        $passwordField = $this->getPasswordField();
 
-          // loop through custom fields to find the username field value if the username field is a custom field
-          // otherwise assume the username field is a member field and try to get the value from the member data refer default field mapping to email
-          $username = $member["email"];
+        // loop through custom fields to find the username field value if the username field is a custom field
+        // otherwise assume the username field is a member field and try to get the value from the member data refer default field mapping to email
+        $username = $member["email"];
+        $password = wp_generate_password();
 
-          if ( ! empty($username_field) && isset($member["customFieldValues"]) ) {
-            foreach ( $member["customFieldValues"] as $cfkey => $customFieldValue) {
-              if (strtolower($member["customFieldValues"][$cfkey]['customField']['name']) === strtolower($username_field)) {
-                $username = sanitize_user($member["customFieldValues"][$cfkey]['text'] ?? $member["email"]);
-              }
+        if ( ! empty($username_field) && isset($member["customFieldValues"]) ) {
+          foreach ( $member["customFieldValues"] as $cfkey => $customFieldValue) {
+            if (strtolower($member["customFieldValues"][$cfkey]['customField']['name']) === strtolower($username_field)) {
+              $username = sanitize_user($member["customFieldValues"][$cfkey]['text'] ?? $member["email"]);
             }
           }
-
-          if ( ! empty($passwordField) && isset($member["customFieldValues"]) ) {
-            foreach ( $member["customFieldValues"] as $cfkey => $customFieldValue) {
-              if (strtolower($member["customFieldValues"][$cfkey]['customField']['name']) === strtolower($passwordField)) {
-                $password = $member["customFieldValues"][$cfkey]['text'] ?? wp_generate_password();
-              }
-            }
-          }
-
-          $user_id = wp_create_user(
-            $username,
-            $password,
-            $member['email']
-          );
-
-          if ( is_wp_error($user_id) ) {
-            throw new UniooSyncUserNotCreatedException($user_id->get_error_message());
-          }
-
-          $isNew = true;
-        } catch ( UniooSyncUserNotCreatedException $e ) {
-          error_log('Error creating user for member ' . $member['email'] . ': ' . $e->getMessage());
-          return null;
         }
+
+        if ( ! empty($passwordField) && isset($member["customFieldValues"]) ) {
+          foreach ( $member["customFieldValues"] as $cfkey => $customFieldValue) {
+            if (strtolower($member["customFieldValues"][$cfkey]['customField']['name']) === strtolower($passwordField)) {
+              $password = $member["customFieldValues"][$cfkey]['text'] ?? wp_generate_password();
+            }
+          }
+        }
+
+        $user_id = wp_create_user(
+          $username,
+          $password,
+          $member['email']
+        );
+
+        if ( is_wp_error($user_id) ) {
+          throw new UniooSyncUserNotCreatedException($user_id->get_error_message());
+        }
+
+        $isNew = true;
       }
 
       return [

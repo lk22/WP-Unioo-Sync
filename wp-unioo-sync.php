@@ -23,6 +23,8 @@ define('WP_UNIOO_SYNC_TEXTDOMAIN', 'wp-unioo-sync');
 define('WP_UNIOO_SYNC_TABLE_NAME', $wpdb->prefix . 'wp_unioo_sync');
 
 require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
+require_once ABSPATH . 'wp-admin/includes/user.php';
+require_once ABSPATH . 'wp-includes/pluggable.php';
 require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 require_once WP_UNIOO_SYNC_PLUGIN_DIR . 'functions.php';
 

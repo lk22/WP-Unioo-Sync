@@ -6,12 +6,33 @@
             "LeoKnudsen\\WpUniooSync\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
     "authors": [
         {
             "name": "lk22",
             "email": "nightskater-220@hotmail.com"
         }
     ],
+    "scripts": {
+        "test": "phpunit"
+
+    },
     "minimum-stability": "stable",
-    "require": {}
+    "require-dev": {
+        "wp-coding-standards/wpcs": "^3.3",
+        "brain/monkey": "2.*",
+        "pestphp/pest": "^4.4",
+        "mockery/mockery": "^1.6"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "composer/installers": true,
+            "pestphp/pest-plugin": true
+        }
+    }
 }
