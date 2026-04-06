@@ -203,6 +203,7 @@ it('inserts the member into the database table if the member not exists in the d
   ];
 
   $result = $restAPI->insertUpdateIntoTable($member, 1);
+
   expect($result)->toBeNull();
 });
 
