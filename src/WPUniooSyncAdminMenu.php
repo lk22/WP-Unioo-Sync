@@ -141,6 +141,16 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         ]
       );
 
+      register_setting(
+        'wp_unioo_sync_settings_group',
+        'wp_unioo_sync_default_email_address_on_sync',
+        [
+          'type' => 'string',
+          'sanitize_callback' => 'sanitize_email',
+          'default' => ''
+        ]
+      );
+
       add_settings_section(
         'wp_unioo_sync_api_section',
         __('API Settings', WP_UNIOO_SYNC_TEXTDOMAIN),
@@ -226,6 +236,14 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         'wp_unioo_sync_user_default_password_field',
         __('Default User Password Field', WP_UNIOO_SYNC_TEXTDOMAIN),
         [$this, 'render_default_user_password_field'],
+        'wp-unioo-sync-settings',
+        'wp_unioo_sync_api_section'
+      );
+
+      add_settings_field(
+        'wp_unioo_sync_default_email_address_on_sync',
+        __('Default Email Address on Sync', WP_UNIOO_SYNC_TEXTDOMAIN),
+        [$this, 'render_default_email_address_on_sync_field'],
         'wp-unioo-sync-settings',
         'wp_unioo_sync_api_section'
       );
@@ -400,6 +418,21 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
       />
       <p class="description"><?php esc_html_e('Specify the default password to assign to users created during sync. Default is "generate_random", which will create a random password for each user.', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
       <p class="description"><?php esc_html_e('You can also specify a fixed password or use a field from the Unioo member data by adding it as {{field_name}}', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
+      <?php
+    }
+
+    public function render_default_email_address_on_sync_field() {
+      $option_name = 'wp_unioo_sync_default_email_address_on_sync';
+      $value = get_option($option_name, '');
+      ?>
+      <input
+        type="email"
+        id="<?php echo esc_attr($option_name); ?>"
+        name="<?php echo esc_attr($option_name); ?>"
+        value="<?php echo esc_attr($value); ?>"
+        class="regular-text"
+      />
+      <p class="description"><?php esc_html_e('Specify a default email address to notify when a synchronization is complete. "log" will create a log file (this is useful for debugging purposes).', WP_UNIOO_SYNC_TEXTDOMAIN); ?></p>
       <?php
     }
 
