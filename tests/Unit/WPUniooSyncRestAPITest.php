@@ -161,3 +161,104 @@ it('Checks if the REST API callback function is working', function() {
   expect($response)->toHaveKey('message');
   expect($response['message'])->toBe('CSV import completed successfully.');
 });
+
+it('inserts the member into the database table if the member not exists in the database', function() {
+  global $wpdb;
+
+  $mockedWPDB = \Mockery::mock('wpdb');
+  $mockedWPDB->prefix = 'wp_';
+  $mockedWPDB->shouldReceive('get_row')->once()->andReturn(null);
+  $mockedWPDB->shouldReceive('prepare')->once()->andReturn(
+    "SELECT * FROM wp_unioo_members WHERE member_id = %s"
+  );
+  $mockedWPDB->shouldReceive('insert')->atLeast()->once()->andReturn(true);
+  $wpdb = $mockedWPDB;
+
+  $restAPI = new WPUniooSyncRestAPI();
+
+  when('current_time')->justReturn('2026-04-06 12:00:00');
+
+  when('get_option')->alias(function($option, $default = false) {
+    return match ( $option ) {
+      'wp_unioo_sync_members_table' => 1,
+      default => $default,
+    };
+  });
+
+  $member = [
+    'Navn' => 'John Doe',
+    'Email' => 'john@doe',
+    'Telefon' => '12345678',
+    'Fødselsdato' => '01-01-2000',
+    'Adresse' => '123 Main St',
+    'By' => 'Copenhagen',
+    'Postnummer' => '1234',
+    'Identifikation' => '1234567890',
+    'Kontingenter (Navne)' => 'Membership 1, Membership 2',
+    'Ubetalte regninger' => 'Invoice 1, Invoice 2',
+    'Indmeldelsesdato' => '01-01-2020',
+    'Udmeldelsesdato' => null,
+    'Aktiv betalingsmetode' => 'Credit Card',
+    'Nyeste note' => 'This is a note',
+  ];
+
+  $result = $restAPI->insertUpdateIntoTable($member, 1);
+  expect($result)->toBeNull();
+});
+
+it('updates the member in the database table if the member already exists in the database and there is a change in the new member data', function() {
+  global $wpdb;
+
+  $mockedWPDB = \Mockery::mock('wpdb');
+  $mockedWPDB->prefix = 'wp_';
+  $mockedWPDB->shouldReceive('get_row')->once()->andReturn((object)[
+    'id' => 1,
+    'member_id' => '1234567890',
+    'user_id' => 1,
+    'name' => 'John Doe',
+    'email' => 'john@doe',
+    'phone' => '12345678',
+    'birth_date' => '01-01-2000',
+    'address' => '123 Main St',
+    'city' => 'Copenhagen',
+    'postal_code' => '1234',
+    'member_since' => '01-01-2020',
+    'unpaid_fee' => false,
+  ]);
+  $mockedWPDB->shouldReceive('prepare')->once()->andReturn(
+    "SELECT * FROM wp_unioo_members WHERE member_id = %s"
+  );
+  $mockedWPDB->shouldReceive('update')->atLeast()->once()->andReturn(true);
+  $wpdb = $mockedWPDB;
+
+  when('current_time')->justReturn('2026-04-06 12:00:00');
+
+  when('get_option')->alias(function($option, $default = false) {
+    return match ( $option ) {
+      'wp_unioo_sync_members_table' => 1,
+      default => $default,
+    };
+  });
+
+  $restAPI = new WPUniooSyncRestAPI();
+
+  $member = [
+    'Navn' => 'John Doe Updated',
+    'Email' => 'john@doe',
+    'Telefon' => '12345678',
+    'Fødselsdato' => '01-01-2000',
+    'Adresse' => '123 Main St',
+    'By' => 'Copenhagen',
+    'Postnummer' => '1234',
+    'Identifikation' => '1234567890',
+    'Kontingenter (Navne)' => 'Membership 1, Membership 2',
+    'Ubetalte regninger' => false,
+    'Indmeldelsesdato' => '01-01-2020',
+    'Udmeldelsesdato' => null,
+    'Aktiv betalingsmetode' => 'Credit Card',
+    'Nyeste note' => 'This is a note',
+  ];
+
+  $result = $restAPI->insertUpdateIntoTable($member, 1);
+  expect($result)->toBeNull();
+});

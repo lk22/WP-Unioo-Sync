@@ -195,7 +195,7 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
      * @param mixed $user_id
      * @return void
      */
-    public function insertUpdateIntoTable($member, $user_id) {
+    public function insertUpdateIntoTable($member, $user_id): void {
       global $wpdb;
       $table_name = $wpdb->prefix . 'unioo_members';
 
@@ -277,8 +277,8 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
             '%s',
             '%s',
             '%s',
-           ]
-         );
+            ]
+          );
           if ( $sync_log_creatd === false ) {
             throw new UniooSyncLogNotCreatedException('Failed to log sync status in the database.');
           }
