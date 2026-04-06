@@ -125,7 +125,7 @@ Run PHPCS:
 
 ### GraphQL Endpoint URL
 
-The GraphQL endpoint used to fetch member data from Unioo. If no URL is set in the client, the plugin falls back to `https://api.unioo.io/graphql`.
+The GraphQL endpoint used to fetch member data from Unioo. If no URL is set in the client, the plugin falls back to `/graphql`.
 
 ### API Key / Bearer Token
 
