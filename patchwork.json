@@ -1,1 +1,1 @@
-{"redefinable-internals": ["error_log"]}
+{"redefinable-internals": ["error_log", "file_exists", "file_get_contents", "file_put_contents", "mkdir"]}

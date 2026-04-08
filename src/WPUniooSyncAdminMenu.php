@@ -146,7 +146,7 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         'wp_unioo_sync_default_email_address_on_sync',
         [
           'type' => 'string',
-          'sanitize_callback' => 'sanitize_email',
+          'sanitize_callback' => [$this, 'sanitize_sync_email_or_log'],
           'default' => ''
         ]
       );
@@ -247,6 +247,25 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
         'wp-unioo-sync-settings',
         'wp_unioo_sync_api_section'
       );
+    }
+
+    public function sanitize_sync_email_or_log($value): string {
+      $value = trim((string) $value);
+
+      if ( $value === 'log' ) {
+        return 'log';
+      }
+
+      if ( $value === '' ) {
+        return '';
+      }
+
+      $sanitized_email = sanitize_email($value);
+      if ( $sanitized_email === '' || ! is_email($sanitized_email) ) {
+        return '';
+      }
+
+      return $sanitized_email;
     }
 
 
@@ -426,7 +445,7 @@ if ( ! class_exists( 'WPUniooSyncAdminMenu' ) ) {
       $value = get_option($option_name, '');
       ?>
       <input
-        type="email"
+        type="text"
         id="<?php echo esc_attr($option_name); ?>"
         name="<?php echo esc_attr($option_name); ?>"
         value="<?php echo esc_attr($value); ?>"

@@ -7,7 +7,7 @@ if ( ! defined('ABSPATH') ) {
 
 use Exception;
 
-if ( ! class_exists('UniooSyncMailTemplateNotFoundException') ) {
+if ( ! class_exists(UniooSyncMailTemplateNotFoundException::class) ) {
   class UniooSyncMailTemplateNotFoundException extends Exception
   {
     protected $message = 'The specified email template was not found.';
