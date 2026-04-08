@@ -91,8 +91,11 @@ if ( ! class_exists('UniooMailer') ) {
 
       $message = str_replace('{{message}}', $msg, $template_content);
 
-      // If the recipient is set to "log", write mail content to a local log file instead of sending.
-      if ( get_option('wp_unioo_sync_default_email_address_on_sync') === 'log' ) {
+      // if the default email address is set to 'log' or is empty, log the message instead of sending an email
+      if (
+        get_option('wp_unioo_sync_default_email_address_on_sync') === '' ||
+        get_option('wp_unioo_sync_default_email_address_on_sync') === 'log'
+      ) {
         $this->checkLogFile();
 
         $log_file = $this->getLogFilePath();
