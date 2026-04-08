@@ -61,7 +61,6 @@ if (isset($_REQUEST['sync_action']) && $_REQUEST["sync_action"] === 'sync_member
     $client = new UniooClient(get_option('wp_unioo_sync_graphql_url'), get_option('wp_unioo_sync_bearer_token'));
     $sync = new SyncMembersList($client);
     $response = $sync->execute();
-    wp_send_json_success(['message' => 'Unioo sync completed', 'response' => $response]);
 }
 
 add_action('wp_ajax_sync_members_list', function() {
