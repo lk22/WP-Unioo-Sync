@@ -8,7 +8,6 @@ if ( ! defined('ABSPATH') ) {
   exit();
 }
 
-
 if ( ! class_exists('UniooMailer') ) {
   class UniooMailer {
 
@@ -89,22 +88,26 @@ if ( ! class_exists('UniooMailer') ) {
         error_log("UniooMailer: Failed to read template file: {$this->template}");
         return;
       }
-      $message = str_replace('{{error_message}}', $msg, $template_content);
+
+      $message = str_replace('{{message}}', $msg, $template_content);
 
       // If the recipient is set to "log", write mail content to a local log file instead of sending.
-      if ( $this->recipient === 'log' ) {
+      if ( get_option('wp_unioo_sync_default_email_address_on_sync') === 'log' ) {
         $this->checkLogFile();
 
         $log_file = $this->getLogFilePath();
         $log_message = sprintf("[%s] Subject: %s | Message: %s\n", wp_date('Y-m-d H:i:s'), $subject, $message);
         $this->writeLogFile($log_file, $log_message, FILE_APPEND);
+
         return;
       } else if ( ! empty($this->recipient) ) {
         if ( ! str_contains($this->recipient, '@') ) {
           error_log("UniooMailer: Invalid recipient email address: {$this->recipient}");
           return;
         }
+
         $sent = wp_mail($this->recipient, $subject, $message);
+
         if ( ! $sent ) {
           error_log("UniooMailer: Failed to send email to {$this->recipient}");
         }
