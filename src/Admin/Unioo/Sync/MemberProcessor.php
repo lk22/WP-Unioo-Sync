@@ -40,6 +40,28 @@ if ( ! class_exists('MemberProcessor') ) {
     }
 
     /**
+     * Checks if the member has subscription with invoices
+     *
+     * @param mixed $member
+     * @return bool
+     */
+    public function hasSubscriptionWithInvoices($member): bool
+    {
+      return $member['hasSubscriptionWithInvoices'] ?? false;
+    }
+
+    /**
+     * Checks if the member has unpaid invoices
+     *
+     * @param mixed $member
+     * @return bool
+     */
+    public function hasUnpaidInvoices($member): bool
+    {
+      return $member['hasUnpaidInvoices'] ?? false;
+    }
+
+    /**
      * fetching username field for member user creation
      *
      * @return string
@@ -83,13 +105,14 @@ if ( ! class_exists('MemberProcessor') ) {
      */
     public function process(array $member): string
     {
-      $isActive = $this->isActiveMember($member);
       $existingUser = get_user_by('email', $member['email']);
+      $hasUnpaidInvoices = $this->hasUnpaidInvoices($member);
+      $hasExpiredPaymentMethod = $this->isMemberExpired($member);
 
       /**
        * Delete user if the member is not active but exists as a user, this prevents non payed users have access
        */
-      if ( ! $isActive ) {
+      if ( $hasUnpaidInvoices || $hasExpiredPaymentMethod ) {
         if ( $existingUser ) {
           wp_delete_user($existingUser->ID);
           return 'deleted';
