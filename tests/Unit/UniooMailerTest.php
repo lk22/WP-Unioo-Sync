@@ -23,12 +23,17 @@ it('resolves the template path correctly when the template exists', function () 
   expect($mailer->template)->toBe($templatePath);
 });
 
-it('sends the email as a log message in logfile', function () {
+it('sends the email as a log message in logfile if default mail option is empty or set to log', function () {
   $templatePath = WP_UNIOO_SYNC_PLUGIN_DIR . 'templates/mails/test-template.php';
 
   when('__')->alias(fn($s) => $s);
   when('wp_date')->justReturn('2026-04-08 12:00:00');
-  when('get_option')->justReturn('');
+  when('get_option')->alias(function($option) {
+    return match ($option) {
+      'wp_unioo_sync_default_email_address_on_sync' => 'log',
+      default => '',
+    };
+  });
   when('file_get_contents')->justReturn('<p>{{error_message}}</p>');
   when('mkdir')->justReturn(true);
   when('file_put_contents')->justReturn(true);
@@ -43,6 +48,7 @@ it('sends the email as a log message in logfile', function () {
 
   expect(true)->toBeTrue();
 });
+
 
 it('creates the log directory if it does not exist', function () {
   $templatePath = WP_UNIOO_SYNC_PLUGIN_DIR . 'templates/mails/test-template.php';
