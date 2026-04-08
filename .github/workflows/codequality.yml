@@ -4,10 +4,16 @@ on:
     branches:
       - main
       - master
+      - feature-*
+      - bugfix-*
+      - hotfix-*
   push:
     branches:
       - main
       - master
+      - feature-*
+      - bugfix-*
+      - hotfix-*
 
 jobs:
   code-quality:

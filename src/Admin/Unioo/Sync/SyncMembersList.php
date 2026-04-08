@@ -8,6 +8,8 @@ if ( ! defined('ABSPATH') ) {
 
 use LeoKnudsen\WpUniooSync\Admin\Unioo\UniooClient;
 use LeoKnudsen\WpUniooSync\Admin\Unioo\Sync\MemberProcessor;
+use LeoKnudsen\WpUniooSync\Admin\Unioo\Mailer\UniooMailer;
+
 
 if ( ! class_exists('SyncMembersList') ) {
   class SyncMembersList {
@@ -19,6 +21,8 @@ if ( ! class_exists('SyncMembersList') ) {
     public function execute(): array {
       global $wpdb;
       $table_name = WP_UNIOO_SYNC_TABLE_NAME;
+
+      $mail_template = 'sync-failure-log.php';
 
       if (
         ! get_option('wp_unioo_sync_username') ||
@@ -33,6 +37,9 @@ if ( ! class_exists('SyncMembersList') ) {
           '%s',
           '%s',
         ]);
+
+        $mailer = new UniooMailer($mail_template, get_option('wp_unioo_sync_default_email_address_on_sync'), __('Unioo API Sync Failure: Missing Credentials', WP_UNIOO_SYNC_TEXTDOMAIN));
+        $mailer->send('Unioo API sync failed: Missing API credentials. Please provide both username and password in the plugin settings.');
 
         return [
           'success' => false,
@@ -73,6 +80,17 @@ if ( ! class_exists('SyncMembersList') ) {
           '%s',
         ]
       );
+
+      $mail_template = 'sync-complete-template.php';
+
+      $mailer = new UniooMailer($mail_template, get_option('wp_unioo_sync_default_email_address_on_sync'), __('Unioo API Sync Completed', WP_UNIOO_SYNC_TEXTDOMAIN));
+      $mailer->send(sprintf(
+        __('Unioo API sync completed: %d created, %d updated, %d failed, %d skipped.', WP_UNIOO_SYNC_TEXTDOMAIN),
+        $results['created'],
+        $results['updated'],
+        $results['failed'],
+        $results['skipped']
+      ));
 
       return [
         'success' => true,

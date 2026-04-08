@@ -1,3 +1,5 @@
 /vendor/
 /wp/
 /wp-content/
+/logs/
+/bin/
