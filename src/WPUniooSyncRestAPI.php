@@ -7,6 +7,7 @@ use WP_User;
 
 use LeoKnudsen\WpUniooSync\Exceptions\UniooSyncUserNotCreatedException;
 use LeoKnudsen\WpUniooSync\Exceptions\UniooSyncLogNotCreatedException;
+use LeoKnudsen\WpUniooSync\Admin\Unioo\Mailer\UniooMailer;
 
 if ( ! defined('ABSPATH') ) {
   exit();
@@ -111,6 +112,13 @@ if ( ! class_exists('WPUniooSyncRestAPI') ) {
         'success',
         $sync_result['message']
       );
+
+      $mailer_template = 'sync-complete-template.php';
+      $mailer = new UniooMailer($mailer_template, get_option('wp_unioo_sync_default_email_address_on_sync'), __('Unioo CSV Sync Completed', WP_UNIOO_SYNC_TEXTDOMAIN));
+      $mailer->send(sprintf(
+        __('CSV import completed successfully. %d users created.', WP_UNIOO_SYNC_TEXTDOMAIN),
+        $createdUsers
+      ));
 
       return rest_ensure_response($sync_result);
     }
