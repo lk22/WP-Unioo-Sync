@@ -67,24 +67,35 @@ it('Checks if the member is not marked as expired', function() {
   expect($memberProcessor->isMemberExpired($member))->toBeFalse();
 });
 
-it('Checks if the member is marked as inactive and not have an existing user', function() {
+it('Checks if the member has unpaid invoices and the member is active not having an existing user', function() {
   $memberProcessor = new MemberProcessor();
 
   $member = [
-    'status' => 'INACTIVE',
-    'email' => 'leo@example.com'
+    'status' => 'ACTIVE',
+    'email' => 'leo@example.com',
+    'hasUnpaidInvoices' => true,
+    'paymentMethod' => [
+      'isExpired' => false
+    ]
   ];
 
   when('get_user_by')->justReturn(null);
-  expect($memberProcessor->process($member))->toBe('skipped');
+
+  $processedMember = $memberProcessor->process($member);
+
+  expect($processedMember)->toBe('skipped');
 });
 
-it('Deletes the member user if the member is marked as not active but has existing user', function(){
+it('Deletes the member if the member has unpaid invoices or expired payment method', function(){
   $memberProcessor = new MemberProcessor();
 
   $member = [
     'status' => 'INACTIVE',
-    'email' => 'test@example.com'
+    'email' => 'test@example.com',
+    'hasUnpaidInvoices' => true,
+    'paymentMethod' => [
+      'isExpired' => false
+    ]
   ];
 
   $existingUser = (object) ['ID' => 1, 'email' => $member['email']];
